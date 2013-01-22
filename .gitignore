@@ -1,7 +1,6 @@
 # Wanna ignore this sdf file extension that is created by visual studio.
 .sdf
 .opensdf
-
 .ipch
 .log
 .tlog

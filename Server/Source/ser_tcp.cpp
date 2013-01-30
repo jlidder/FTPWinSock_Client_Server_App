@@ -1,8 +1,7 @@
-//    SERVER TCP PROGRAM
+// SERVER TCP PROGRAM
 // revised and tidied up by
-// J.W. Atwood
-// 1999 June 30
-// There is still some leftover trash in this code.
+// J.W. Atwood & Jaspreet Singh Lidder
+// 1999 June 30 // 2013 January 29
 
 /* send and receive codes between client and server */
 /* This is your basic WINSOCK shell */
@@ -15,39 +14,33 @@
 #include <iostream>
 #include <windows.h>
 
-
-
 using namespace std;
 
 //port data types
-
 #define REQUEST_PORT 0x7070
-
 int port=REQUEST_PORT;
 
 //socket data types
 SOCKET s;
-
 SOCKET s1;
 SOCKADDR_IN sa;      // filled by bind
 SOCKADDR_IN sa1;     // fill with server info, IP, port
-union {struct sockaddr generic;
-	struct sockaddr_in ca_in;}ca;
 
+union 
+{
+	struct sockaddr generic;
+	struct sockaddr_in ca_in;}ca;
 	int calen=sizeof(ca); 
 
 	//buffer data types
-	char szbuffer[128];
-
+	char szbuffer[1500];
 	char *buffer;
 	int ibufferlen;
 	int ibytesrecv;
-
 	int ibytessent;
 
 	//host data types
 	char localhost[11];
-
 	HOSTENT *hp;
 
 	//wait variables
@@ -55,44 +48,46 @@ union {struct sockaddr generic;
 	int r,infds=1, outfds=0;
 	struct timeval timeout;
 	const struct timeval *tp=&timeout;
-
 	fd_set readfds;
 
 	//others
 	HANDLE test;
-
 	DWORD dwtest;
 
-	//reference for used structures
+						//reference for used structures
 
-	/*  * Host structure
+						/*  * Host structure
 
-	    struct  hostent {
-	    char    FAR * h_name;             official name of host *
-	    char    FAR * FAR * h_aliases;    alias list *
-	    short   h_addrtype;               host address type *
-	    short   h_length;                 length of address *
-	    char    FAR * FAR * h_addr_list;  list of addresses *
-#define h_addr  h_addr_list[0]            address, for backward compat *
-};
+							struct  hostent {
+							char    FAR * h_name;             official name of host *
+							char    FAR * FAR * h_aliases;    alias list *
+							short   h_addrtype;               host address type *
+							short   h_length;                 length of address *
+							char    FAR * FAR * h_addr_list;  list of addresses *
+					#define h_addr  h_addr_list[0]            address, for backward compat *
+					};
 
-	 * Socket address structure
+						 * Socket address structure
 
-	 struct sockaddr_in {
-	 short   sin_family;
-	 u_short sin_port;
-	 struct  in_addr sin_addr;
-	 char    sin_zero[8];
-	 }; */
+						 struct sockaddr_in {
+						 short   sin_family;
+						 u_short sin_port;
+						 struct  in_addr sin_addr;
+						 char    sin_zero[8];
+						 }; */
 
-	int main(void){
+	int main(void)
+	{
 
 		WSADATA wsadata;
 
-		try{        		 
-			if (WSAStartup(0x0202,&wsadata)!=0){  
+		try
+		{        		 
+			if (WSAStartup(0x0202,&wsadata)!=0)  
 				cout<<"Error in starting WSAStartup()\n";
-			}else{
+			
+			else
+			{
 				buffer="WSAStartup was suuccessful\n";   
 				WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
 
@@ -107,11 +102,11 @@ union {struct sockaddr generic;
 			}  
 
 			//Display info of local host
-
 			gethostname(localhost,10);
 			cout<<"hostname: "<<localhost<< endl;
 
-			if((hp=gethostbyname(localhost)) == NULL) {
+			if((hp=gethostbyname(localhost)) == NULL) 
+			{
 				cout << "gethostbyname() cannot get local host info?"
 					<< WSAGetLastError() << endl; 
 				exit(1);
@@ -130,13 +125,11 @@ union {struct sockaddr generic;
 
 
 			//Bind the server port
-
 			if (bind(s,(LPSOCKADDR)&sa,sizeof(sa)) == SOCKET_ERROR)
 				throw "can't bind the socket";
 			cout << "Bind was successful" << endl;
 
 			//Successfull bind, now listen for client requests.
-
 			if(listen(s,10) == SOCKET_ERROR)
 				throw "couldn't  set up listen on socket";
 			else cout << "Listen was successful" << endl;
@@ -144,9 +137,7 @@ union {struct sockaddr generic;
 			FD_ZERO(&readfds);
 
 			//wait loop
-
 			while(1)
-
 			{
 
 				FD_SET(s,&readfds);  //always check the listener
@@ -167,7 +158,7 @@ union {struct sockaddr generic;
 					<<hex<<htons(ca.ca_in.sin_port)<<endl;
 
 				//Fill in szbuffer from accepted request.
-				if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR)
+				if((ibytesrecv = recv(s1,szbuffer,1500,0)) == SOCKET_ERROR)
 					throw "Receive error in server program\n";
 
 				//Print reciept of successful message. 
@@ -185,7 +176,6 @@ union {struct sockaddr generic;
 		} //try loop
 
 		//Display needed error message.
-
 		catch(char* str) { cerr<<str<<WSAGetLastError()<<endl;}
 
 		//close Client socket

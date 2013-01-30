@@ -1,55 +1,38 @@
 // CLIENT TCP PROGRAM
 // Revised and tidied up by
-// J.W. Atwood
-// 1999 June 30
-
-
+// J.W. Atwood & Jaspreet Singh Lidder
+// 1999 June 30 // 2013 January 29
 
 char* getmessage(char *);
-
-
 
 /* send and receive codes between client and server */
 /* This is your basic WINSOCK shell */
 #pragma comment( linker, "/defaultlib:ws2_32.lib" )
 #include <winsock2.h>
 #include <ws2tcpip.h>
-
 #include <winsock.h>
 #include <stdio.h>
 #include <iostream>
-
 #include <string.h>
-
 #include <windows.h>
 
 using namespace std;
 
 //user defined port number
 #define REQUEST_PORT 0x7070;
-
 int port=REQUEST_PORT;
-
-
 
 //socket data types
 SOCKET s;
 SOCKADDR_IN sa;         // filled by bind
 SOCKADDR_IN sa_in;      // fill with server info, IP, port
 
-
-
 //buffer data types
-char szbuffer[128];
-
+char szbuffer[1500]; //1500 buffer size. We expect to use 1200 for actual raw data + 300 saved for header info and other info.
 char *buffer;
-
 int ibufferlen=0;
-
 int ibytessent;
 int ibytesrecv=0;
-
-
 
 //host data types
 HOSTENT *hp;
@@ -58,49 +41,52 @@ HOSTENT *rp;
 char localhost[11],
      remotehost[11];
 
-
 //other
-
 HANDLE test;
-
 DWORD dwtest;
 
+						//reference for used structures
 
+						/*  * Host structure
 
+							struct  hostent {
+							char    FAR * h_name;             official name of host *
+							char    FAR * FAR * h_aliases;    alias list *
+							short   h_addrtype;               host address type *
+							short   h_length;                 length of address *
+							char    FAR * FAR * h_addr_list;  list of addresses *
+						#define h_addr  h_addr_list[0]            address, for backward compat *
+						};
 
+						 * Socket address structure
 
-//reference for used structures
+						 struct sockaddr_in {
+						 short   sin_family;
+						 u_short sin_port;
+						 struct  in_addr sin_addr;
+						 char    sin_zero[8];
+						 }; */
 
-/*  * Host structure
-
-    struct  hostent {
-    char    FAR * h_name;             official name of host *
-    char    FAR * FAR * h_aliases;    alias list *
-    short   h_addrtype;               host address type *
-    short   h_length;                 length of address *
-    char    FAR * FAR * h_addr_list;  list of addresses *
-#define h_addr  h_addr_list[0]            address, for backward compat *
+struct PACKET
+{
+    string Header;
+    char data[1300];
+	bool FIRST_PACKET_OF_STREAM;
+    bool LAST_PACKET_OF_STREAM;
 };
 
- * Socket address structure
 
- struct sockaddr_in {
- short   sin_family;
- u_short sin_port;
- struct  in_addr sin_addr;
- char    sin_zero[8];
- }; */
-
-
-int main(void){
-
+int main(void)
+{
 	WSADATA wsadata;
 
-	try {
-
-		if (WSAStartup(0x0202,&wsadata)!=0){  
+	try 
+	{
+		if (WSAStartup(0x0202,&wsadata)!=0)
 			cout<<"Error in starting WSAStartup()" << endl;
-		} else {
+
+		else 
+		{
 			buffer="WSAStartup was successful\n";   
 			WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
 
@@ -113,7 +99,6 @@ int main(void){
 				<< "wsadata.iMaxSockets "    << wsadata.iMaxSockets    << endl
 				<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;
 		}  
-
 
 		//Display name of local host.
 
@@ -144,7 +129,6 @@ int main(void){
 		sa_in.sin_port = htons(port);
 
 		//Display the host machine internet address
-
 		cout << "Connecting to remote host:";
 		cout << inet_ntoa(sa_in.sin_addr) << endl;
 
@@ -160,11 +144,12 @@ int main(void){
 
 		//append client message to szbuffer + send.
 
-		sprintf(szbuffer,"hello world!\r\n"); 
+		sprintf_s(szbuffer,"hello world!\r\n"); 
 
 		ibytessent=0;    
 		ibufferlen = strlen(szbuffer);
 		ibytessent = send(s,szbuffer,ibufferlen,0);
+
 		if (ibytessent == SOCKET_ERROR)
 			throw "Send failed\n";  
 		else
@@ -181,7 +166,10 @@ int main(void){
 
 	//Display any needed error response.
 
-	catch (char *str) { cerr<<str<<":"<<dec<<WSAGetLastError()<<endl;}
+	catch (char *str)
+	{
+		cerr<<str<<":"<<dec<<WSAGetLastError()<<endl;
+	}
 
 	//close the client socket
 	closesocket(s);

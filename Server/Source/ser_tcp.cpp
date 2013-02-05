@@ -172,33 +172,35 @@ union
 					<<hex<<htons(ca.ca_in.sin_port)<<endl;
 
 				//Fill in szbuffer from accepted request.
-				if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR)
+				if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR) //CLIENT SENDS THIS SERVER A REQUEST TYPE.
 					throw "Receive error in server program\n";
 				else
 				{
 					//cout << szbuffer <<endl;
-					std::string msg_converted( reinterpret_cast< char const* >(szbuffer) );
+					std::string msg_converted( reinterpret_cast< char const* >(szbuffer) ); 
 
-					if(msg_converted == "get")
+					if(msg_converted == "get") //THE REQUEST IS A GET-TYPE
 					{
 						cout << msg_converted <<endl;
 						char response_msg[128];
 						sprintf_s(response_msg,"ok");
 
-						if(send(s1,response_msg,128,0)==SOCKET_ERROR)
+						if(send(s1,response_msg,128,0)==SOCKET_ERROR) //SERVER SENDS A OK CONFIRMATION TO CLIENT.
 							throw "Send error in server program\n";
 
 						else
 						{
-							if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR)
+							char filenamebuffer[128];
+							if((ibytesrecv = recv(s1,filenamebuffer,128,0)) == SOCKET_ERROR)  //CLIENT SENDS FILE-NAME TO BE DOWNLOADED.
 								throw "Receive error in server program\n";
 
 							else
 							{
-								std::string msg_converted( reinterpret_cast< char const* >(szbuffer) ); //should be receiving the filename
+								std::string file_name_converted( reinterpret_cast< char const* >(filenamebuffer) ); //should be receiving the filename
 
 								//PROCESS FILE AND SEND IT BACK....
-								cout << "process file and send it back :)" << endl;
+
+								cout << "process file and send it back :) " << file_name_converted << endl;
 
 							}
 						}

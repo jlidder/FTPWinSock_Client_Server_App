@@ -4,7 +4,6 @@
 // 1999 June 30 // 2013 January 29
 
 char* getmessage(char *);
-
 /* send and receive codes between client and server */
 /* This is your basic WINSOCK shell */
 #pragma comment( linker, "/defaultlib:ws2_32.lib" )
@@ -15,10 +14,8 @@ char* getmessage(char *);
 #include <iostream>
 #include <string.h>
 #include <windows.h>
-
 #include <iostream>
 #include <fstream>
-
 #include <math.h>
 #include "string"
 
@@ -81,11 +78,9 @@ struct PACKET
     bool LAST_PACKET_OF_STREAM;
 };
 
-
 int main(void)
 {
 	WSADATA wsadata;
-
 	try 
 	{
 		if (WSAStartup(0x0202,&wsadata)!=0)
@@ -173,37 +168,31 @@ int main(void)
 			
 			ibytessent=0; 
 			ibufferlen = strlen(request_msg);
-			if (send(s,request_msg, 128, 0) == SOCKET_ERROR)
+			if (send(s,request_msg, 128, 0) == SOCKET_ERROR) // TELL THE SERVER WE WANT TO INITIATE A FILE GET REQUEST
 				throw "get failed\n";  
 
 			char server_request_response[128];
-			if((ibytesrecv = recv(s,server_request_response,128,0)) == SOCKET_ERROR)
+			if((ibytesrecv = recv(s,server_request_response,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH "OK" RESPONSE TO GET REQUEST
 				throw "get failed\n";
 			else
 			{
 				std::string server_msg_converted( reinterpret_cast< char const* >(server_request_response) );
 				if(server_msg_converted=="ok")
 				{
-					int test;
-					cin >> test;
-					if (send(s,filename, 128, 0) == SOCKET_ERROR)
+					if (send(s,filename, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
 						throw "file transfer initiation failed\n";  
 
-					char file_ok_msg[128];
+					char file_content[128];
 
-					if((ibytesrecv = recv(s,file_ok_msg,128,0)) == SOCKET_ERROR)
+					if((ibytesrecv = recv(s,file_content,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH FILE CONTENT
 						throw "Server could not find file!";
 
 					else
 					{
-						cout << file_ok_msg << endl;
-						if(true==std::strcmp(server_request_response, "ok"))
-						{
-							char file[1300];
+							/*
+							 * FILE RECEIVE LOGIC GOES HERE! (probably a for loop. LOOP(request <--> response) )
+							 */
 
-							if((ibytesrecv = recv(s,file_ok_msg,128,0)) == SOCKET_ERROR)
-								throw "Server could not find file!";
-						}
 					}
 				}
 				else
@@ -217,6 +206,7 @@ int main(void)
 		  //PUTTING A FILE ON THE SERVER.
 		  else if(type_of_transfer == "put")
 		  {
+			 /* 
 		      ifstream file (filename, ios::in|ios::binary|ios::ate);
 			  if (file.is_open())
 			  {
@@ -281,6 +271,7 @@ int main(void)
 				  throw "Receive failed\n";
 			  else
 				cout << "Packet Received by Server Successfully - Msg from server:" << szbuffer << endl;
+			  */
 		  }//end of if-put block
 
 
@@ -300,47 +291,3 @@ int main(void)
 	WSACleanup();  
 	return 0;
 }
-
-/*
- * Returns a pointer to an array of packets
-  
-PACKET* ConvertFileIntoPackets(string filename)
-{
-	 ifstream file (filename, ios::in|ios::binary|ios::ate);
-			  if (file.is_open())
-			  {
-					int filesize = file.tellg();
-					char * memblock = new char [filesize];
-					cout << filesize;
-					file.seekg (0, ios::beg);
-					file.read (memblock, filesize);
-					file.close();
-
-					cout << "the complete file content is in memory";
-
-					//CREATE PACKETS BASED ON SIZE OF FILE
-					int amount_of_packets = ceil((filesize/1300.0));
-					int position_of_buffer = 0;
-					PACKET * packet_collection = new PACKET[amount_of_packets];
-					int packet_number=0;
-					int byte_in_packet=0;
-					int dummy=0;
-
-					for(packet_number=0; packet_number< amount_of_packets; packet_number++)
-					{
-						for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
-						{
-							if(position_of_buffer < filesize)
-							{
-								memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
-								if(byte_in_packet==1299)
-									memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1);
-								continue;
-							}
-						}
-					}
-
-					//cout << "finished packaging file!";
-					delete[] memblock; //get rid of the in-memory buffer storage.
-					return packet_collection;
-}*/

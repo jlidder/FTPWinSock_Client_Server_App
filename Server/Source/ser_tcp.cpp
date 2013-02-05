@@ -13,6 +13,10 @@
 #include <winsock.h>
 #include <iostream>
 #include <windows.h>
+#include <string.h>
+
+#include "string"
+
 
 using namespace std;
 
@@ -26,6 +30,14 @@ SOCKET s1;
 SOCKADDR_IN sa;      // filled by bind
 SOCKADDR_IN sa1;     // fill with server info, IP, port
 
+struct PACKET
+{
+    string Header;
+    char data[1300];
+	bool FIRST_PACKET_OF_STREAM;
+    bool LAST_PACKET_OF_STREAM;
+};
+
 union 
 {
 	struct sockaddr generic;
@@ -33,7 +45,7 @@ union
 	int calen=sizeof(ca); 
 
 	//buffer data types
-	char szbuffer[1500];
+	char szbuffer[2000];
 	char *buffer;
 	int ibufferlen;
 	int ibytesrecv;
@@ -103,7 +115,7 @@ union
 
 			//Display info of local host
 			gethostname(localhost,10);
-			cout<<"hostname: "<<localhost<< endl;
+			cout<<"ftpd_tcp starting at host: "<<localhost<< endl;
 
 			if((hp=gethostbyname(localhost)) == NULL) 
 			{
@@ -136,10 +148,13 @@ union
 
 			FD_ZERO(&readfds);
 
+			int close_command=0;
 			//wait loop
+
+			cout << "waiting to be contacted for transferring files..." << endl;
+
 			while(1)
 			{
-
 				FD_SET(s,&readfds);  //always check the listener
 
 				if(!(outfds=select(infds,&readfds,NULL,NULL,tp))) {}
@@ -149,7 +164,6 @@ union
 				else if (FD_ISSET(s,&readfds))  cout << "got a connection request" << endl; 
 
 				//Found a connection request, try to accept. 
-
 				if((s1=accept(s,&ca.generic,&calen))==INVALID_SOCKET)
 					throw "Couldn't accept connection\n";
 
@@ -158,21 +172,64 @@ union
 					<<hex<<htons(ca.ca_in.sin_port)<<endl;
 
 				//Fill in szbuffer from accepted request.
-				if((ibytesrecv = recv(s1,szbuffer,1500,0)) == SOCKET_ERROR)
+				if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR)
 					throw "Receive error in server program\n";
+				else
+				{
+					//cout << szbuffer <<endl;
+					std::string msg_converted( reinterpret_cast< char const* >(szbuffer) );
+
+					if(msg_converted == "get")
+					{
+						cout << msg_converted <<endl;
+						char response_msg[128];
+						sprintf_s(response_msg,"ok");
+
+						if(send(s1,response_msg,128,0)==SOCKET_ERROR)
+							throw "Send error in server program\n";
+
+						else
+						{
+							if((ibytesrecv = recv(s1,szbuffer,128,0)) == SOCKET_ERROR)
+								throw "Receive error in server program\n";
+
+							else
+							{
+								std::string msg_converted( reinterpret_cast< char const* >(szbuffer) ); //should be receiving the filename
+
+								//PROCESS FILE AND SEND IT BACK....
+								cout << "process file and send it back :)" << endl;
+
+							}
+						}
+					}
+
+					else if(msg_converted == "put")
+					{
+
+					}
+					/*
+					int var;
+					cout << szbuffer << endl;
+					cout << "NEXT PLEASE..." << endl;
+					//memset(&szbuffer,' ',1500);
+					cout << "YES..." << endl;
+					Sleep(5000);
+					//Send to Client the received message (echo it back).
+					ibufferlen = strlen(szbuffer);
+					sprintf_s(szbuffer,"returned msg"); 
+					if((ibytessent = send(s1,szbuffer,ibufferlen,0))==SOCKET_ERROR)
+						throw "error in send in server program\n";
+					else{ cout << "msg sent to client" << endl; 
+						continue;}
+					*/
+				}
 
 				//Print reciept of successful message. 
-				cout << "This is message from client: " << szbuffer << endl;
-
-				//Send to Client the received message (echo it back).
-				ibufferlen = strlen(szbuffer);
-
-				if((ibytessent = send(s1,szbuffer,ibufferlen,0))==SOCKET_ERROR)
-					throw "error in send in server program\n";
-				else cout << "Echo message:" << szbuffer << endl;  
+				//cout << "This is message from client: " << szbuffer << endl;
 
 			}//wait loop
-
+			cout << "SERVER IS DONE" << endl;
 		} //try loop
 
 		//Display needed error message.
@@ -183,7 +240,7 @@ union
 
 		//close server socket
 		closesocket(s);
-
+		cout << "SERVER IS DONE" << endl;
 		/* When done uninstall winsock.dll (WSACleanup()) and exit */ 
 		WSACleanup();
 		return 0;

@@ -16,6 +16,12 @@ char* getmessage(char *);
 #include <string.h>
 #include <windows.h>
 
+#include <iostream>
+#include <fstream>
+
+#include <math.h>
+#include "string"
+
 using namespace std;
 
 //user defined port number
@@ -28,7 +34,7 @@ SOCKADDR_IN sa;         // filled by bind
 SOCKADDR_IN sa_in;      // fill with server info, IP, port
 
 //buffer data types
-char szbuffer[1500]; //1500 buffer size. We expect to use 1200 for actual raw data + 300 saved for header info and other info.
+char szbuffer[128]; //1500 buffer size. We expect to use 1200 for actual raw data + 300 saved for header info and other info.
 char *buffer;
 int ibufferlen=0;
 int ibytessent;
@@ -101,19 +107,17 @@ int main(void)
 		}  
 
 		//Display name of local host.
-
 		gethostname(localhost,10);
-		cout<<"Local host name is \"" << localhost << "\"" << endl;
+		cout<<"ftp_tcp starting on host: " << localhost << endl;
 
 		if((hp=gethostbyname(localhost)) == NULL) 
 			throw "gethostbyname failed\n";
 
 		//Ask for name of remote server
 
-		cout << "please enter your remote server name :" << flush ;   
+		cout << "Type name of ftp server :" << flush ;   
 		cin >> remotehost ;
-		cout << "Remote host name is: \"" << remotehost << "\"" << endl;
-
+		//cout << "Remote host name is: \"" << remotehost << "\"" << endl;
 		if((rp=gethostbyname(remotehost)) == NULL)
 			throw "remote gethostbyname failed\n";
 
@@ -142,30 +146,148 @@ int main(void)
 		   - don't forget to append <carriage return> 
 		   - <line feed> characters after the send buffer to indicate end-of file */
 
-		//append client message to szbuffer + send.
+		  ifstream::pos_type filesize;
+		  char * memblock;
+		  int amount_of_packets;
+		  PACKET * packet_collection;
+		  char filename[128];
+		  string type_of_transfer;
 
-		sprintf_s(szbuffer,"hello world!\r\n"); 
+		  cout << "Type name of file to be transferred: ";
+		  cin >> filename;
 
-		ibytessent=0;    
-		ibufferlen = strlen(szbuffer);
-		ibytessent = send(s,szbuffer,ibufferlen,0);
+		  cout << "Type direction of transfer: ";
+		  cin >> type_of_transfer;
+		  cout << "Sent requst to "<<remotehost<<". Handshaking...."<<endl;
 
-		if (ibytessent == SOCKET_ERROR)
-			throw "Send failed\n";  
-		else
-			cout << "Message to server: " << szbuffer;
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //GET REQUEST FROM CLIENT TO SERVER
+		  //GETTING A FILE FROM THE SERVER.
+		  if(type_of_transfer == "get")
+		  {
+            char request_msg[128]; 
 
-		//wait for reception of server response.
-		ibytesrecv=0; 
-		if((ibytesrecv = recv(s,szbuffer,128,0)) == SOCKET_ERROR)
-			throw "Receive failed\n";
-		else
-			cout << "hip hip hoorah!: Successful message replied from server: " << szbuffer;      
+			sprintf_s(request_msg,"get");
+			
+			ibytessent=0; 
+			ibufferlen = strlen(request_msg);
+			if (send(s,request_msg, 128, 0) == SOCKET_ERROR)
+				throw "get failed\n";  
 
+			char server_request_response[128];
+			if((ibytesrecv = recv(s,server_request_response,128,0)) == SOCKET_ERROR)
+				throw "get failed\n";
+			else
+			{
+				std::string server_msg_converted( reinterpret_cast< char const* >(server_request_response) );
+				if(server_msg_converted=="ok")
+				{
+					int test;
+					cin >> test;
+					if (send(s,filename, 128, 0) == SOCKET_ERROR)
+						throw "file transfer initiation failed\n";  
+
+					char file_ok_msg[128];
+
+					if((ibytesrecv = recv(s,file_ok_msg,128,0)) == SOCKET_ERROR)
+						throw "Server could not find file!";
+
+					else
+					{
+						cout << file_ok_msg << endl;
+						if(true==std::strcmp(server_request_response, "ok"))
+						{
+							char file[1300];
+
+							if((ibytesrecv = recv(s,file_ok_msg,128,0)) == SOCKET_ERROR)
+								throw "Server could not find file!";
+						}
+					}
+				}
+				else
+					throw "Server Denied request!";
+			}
+		  }
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+
+		  //PUTTING A FILE ON THE SERVER.
+		  else if(type_of_transfer == "put")
+		  {
+		      ifstream file (filename, ios::in|ios::binary|ios::ate);
+			  if (file.is_open())
+			  {
+					filesize = file.tellg();
+					memblock = new char [filesize];
+					cout << filesize;
+					file.seekg (0, ios::beg);
+					file.read (memblock, filesize);
+					file.close();
+
+					cout << "the complete file content is in memory";
+
+					//CREATE PACKETS BASED ON SIZE OF FILE
+					memblock[3];
+
+					amount_of_packets = ceil((filesize/1300.0));
+					int position_of_buffer = 0;
+					packet_collection = new PACKET[amount_of_packets];
+					int packet_number=0;
+					int byte_in_packet=0;
+					int dummy=0;
+
+					for(packet_number=0; packet_number< amount_of_packets; packet_number++)
+					{
+						for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
+						{
+							if(position_of_buffer < filesize)
+							{
+								memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
+								if(byte_in_packet==1299)
+									memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1);
+								continue;
+							}
+						}
+					}
+
+					cout << "finished packaging file!";
+
+					delete[] memblock; //get rid of the in-memory buffer storage.
+			  }
+
+			  else 
+				  throw "Unable to open file";
+
+			  //sprintf_s(szbuffer,"hello world!\r\n"); 
+			  cout << "AMOUNT OF PACKETS: " << amount_of_packets << endl;
+			  for(int packet_counter=0; packet_counter < 1 ; packet_counter++)
+			  {
+				cout << packet_collection[packet_counter].data << endl;
+				ibytessent=0;    
+				ibufferlen = strlen(packet_collection[100].data);
+				ibytessent = send(s,packet_collection[100].data,ibufferlen,0);
+				if (ibytessent == SOCKET_ERROR)
+					throw "Send failed\n";  
+			  }
+			  //cout << "END OF FOR LOOP!!!!" << endl;
+
+			  //wait for reception of server response.
+			  ibytesrecv=0; 
+			  //cout << "WE REACHED THE WAITING LINE...." << endl;
+			  if((ibytesrecv = recv(s,szbuffer,128,0)) == SOCKET_ERROR)
+				  throw "Receive failed\n";
+			  else
+				cout << "Packet Received by Server Successfully - Msg from server:" << szbuffer << endl;
+		  }//end of if-put block
+
+
+			
 	} // try loop
 
-	//Display any needed error response.
-
+	//Display any needed error response
 	catch (char *str)
 	{
 		cerr<<str<<":"<<dec<<WSAGetLastError()<<endl;
@@ -179,7 +301,46 @@ int main(void)
 	return 0;
 }
 
+/*
+ * Returns a pointer to an array of packets
+  
+PACKET* ConvertFileIntoPackets(string filename)
+{
+	 ifstream file (filename, ios::in|ios::binary|ios::ate);
+			  if (file.is_open())
+			  {
+					int filesize = file.tellg();
+					char * memblock = new char [filesize];
+					cout << filesize;
+					file.seekg (0, ios::beg);
+					file.read (memblock, filesize);
+					file.close();
 
+					cout << "the complete file content is in memory";
 
+					//CREATE PACKETS BASED ON SIZE OF FILE
+					int amount_of_packets = ceil((filesize/1300.0));
+					int position_of_buffer = 0;
+					PACKET * packet_collection = new PACKET[amount_of_packets];
+					int packet_number=0;
+					int byte_in_packet=0;
+					int dummy=0;
 
+					for(packet_number=0; packet_number< amount_of_packets; packet_number++)
+					{
+						for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
+						{
+							if(position_of_buffer < filesize)
+							{
+								memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
+								if(byte_in_packet==1299)
+									memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1);
+								continue;
+							}
+						}
+					}
 
+					//cout << "finished packaging file!";
+					delete[] memblock; //get rid of the in-memory buffer storage.
+					return packet_collection;
+}*/

@@ -18,6 +18,7 @@ char* getmessage(char *);
 #include <fstream>
 #include <math.h>
 #include "string"
+#include <vector>
 
 using namespace std;
 
@@ -36,6 +37,18 @@ char *buffer;
 int ibufferlen=0;
 int ibytessent;
 int ibytesrecv=0;
+
+struct PACKET
+{
+    string Header;
+    char data[1300];
+	bool FIRST_PACKET_OF_STREAM;
+    bool LAST_PACKET_OF_STREAM;
+};
+
+//file buffer data
+PACKET * packet_collection;
+int amount_of_packets;
 
 //host data types
 HOSTENT *hp;
@@ -69,14 +82,6 @@ DWORD dwtest;
 						 struct  in_addr sin_addr;
 						 char    sin_zero[8];
 						 }; */
-
-struct PACKET
-{
-    string Header;
-    char data[1300];
-	bool FIRST_PACKET_OF_STREAM;
-    bool LAST_PACKET_OF_STREAM;
-};
 
 int main(void)
 {
@@ -143,8 +148,6 @@ int main(void)
 
 		  ifstream::pos_type filesize;
 		  char * memblock;
-		  int amount_of_packets;
-		  PACKET * packet_collection;
 		  char filename[128];
 		  string type_of_transfer;
 
@@ -182,26 +185,127 @@ int main(void)
 					if (send(s,filename, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
 						throw "file transfer initiation failed\n";  
 
-					char file_content[128];
-
-					if((ibytesrecv = recv(s,file_content,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH FILE CONTENT
-						throw "Server could not find file!";
-
 					else
 					{
-							/*
-							 * FILE RECEIVE LOGIC GOES HERE! (probably a for loop. LOOP(request <--> response) )
-							 */
+						char num_of_data_chunks_to_receive[128];
 
+						if((ibytesrecv = recv(s,num_of_data_chunks_to_receive,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH HOW MANY DATA CHUNKS IT HAS PREPARED TO SEND TO US. 
+							throw "Server could not receive";                                          // THIS WILL HELP US DEFINE A LOOP FOR CONTINIOUS RECEIVE AND SEND MSG'S.
+						else
+						{
+							//setup file chunks to be received
+							std::string data_chunk_string_form( reinterpret_cast< char const* >(num_of_data_chunks_to_receive) );
+							int data_chunk_int_form = atoi(data_chunk_string_form.c_str());
+
+							packet_collection = new PACKET[data_chunk_int_form]; //setting up the data collection
+
+							char start_msg[128];
+							sprintf_s(start_msg,"start");
+
+							if (send(s,start_msg, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
+								throw "file transfer initiation failed\n";  
+
+							else
+							{
+								int total_bytes_of_file = data_chunk_int_form*1300;
+
+								for(int receive_loop=0; receive_loop < data_chunk_int_form; receive_loop++) // RECEIVE EACH DATA CHUNK
+								{
+									/*
+									 * FILE RECEIVE LOGIC GOES HERE! (probably a for loop. LOOP(request <--> response) )
+									 */
+									char data_chunk[1300];
+									if((ibytesrecv = recv(s,data_chunk,1300,0)) == SOCKET_ERROR) // WAIT FOR THE DATA CHUNK TO BE SENT.
+										throw "get data failed\n";
+									else
+									{
+										for(int data_byte=0; data_byte<1300; data_byte++) //GO THROUGH EACH BYTE IN DATA CHUNK AND DEEP COPY IT OVER TO ITS RESPECTIVE PACKET.
+										{
+											memcpy (&packet_collection[receive_loop].data[data_byte], &data_chunk[data_byte],1);
+											if(receive_loop==1299)
+												memcpy (&packet_collection[receive_loop].data[receive_loop+1], "\0" ,1);
+											continue;
+										}
+									}
+
+									//send a confirmation of receipt.....
+									char receive_msg[128];
+									sprintf_s(receive_msg,"received");
+
+									if (send(s,receive_msg, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
+										throw "file transfer initiation failed\n";  
+									else
+										continue;
+									//-----------------
+								}//end of for-loop which waits for receiving each data chunk
+
+								//finished file transfer over. We need to marshal the data into its respective file type
+								char * file_data_buffer_TOBEWRITTEN = new char[total_bytes_of_file];
+
+								//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+								//sent all data into a single array.
+								//for(int marshalcounter=0 ; marshalcounter< total_bytes_of_file; marshalcounter++)
+								int marshalcounter=0;
+
+								for (int packet_collection_counter=0; packet_collection_counter < data_chunk_int_form; packet_collection_counter++)
+								{
+									for(int bytes_in_packet_counter=0;bytes_in_packet_counter<1300;bytes_in_packet_counter++)
+									{
+										memcpy (&file_data_buffer_TOBEWRITTEN[marshalcounter], &packet_collection[packet_collection_counter].data[bytes_in_packet_counter],1);
+										marshalcounter++;
+									}
+								}
+								//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+								//###################################################################################
+								//write entire array into file
+								//fstream file_stream; 
+								//cout << filename<<endl;
+								//file_stream.open("demo.pdf");
+								//file_stream.write(file_data_buffer_TOBEWRITTEN, total_bytes_of_file);
+								//file_stream.close();
+
+								ofstream outputFile;
+								outputFile.open("test.pdf"); //test.pdf is a temp var. We will get rid of this in the next commit or something
+
+								for(int file_counter=0; file_counter < total_bytes_of_file; file_counter++)
+								{
+									outputFile << file_data_buffer_TOBEWRITTEN[file_counter];
+								}
+								outputFile.close();
+								//###################################################################################
+							}
+
+						}
 					}
 				}
 				else
 					throw "Server Denied request!";
 			}
+			cout << "reached end of client";
+			int testvar;
+			cin >> testvar;
 		  }
 		  //*******************************************************************************************************************************
 		  //*******************************************************************************************************************************
 		  //*******************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		  //PUTTING A FILE ON THE SERVER.
 		  else if(type_of_transfer == "put")
@@ -282,6 +386,9 @@ int main(void)
 	catch (char *str)
 	{
 		cerr<<str<<":"<<dec<<WSAGetLastError()<<endl;
+					cout << "reached end of client";
+			int testvar;
+			cin >> testvar;
 	}
 
 	//close the client socket

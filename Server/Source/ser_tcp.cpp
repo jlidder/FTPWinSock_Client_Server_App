@@ -14,9 +14,8 @@
 #include <iostream>
 #include <windows.h>
 #include <string.h>
-
+#include <fstream>
 #include "string"
-
 
 using namespace std;
 
@@ -50,6 +49,10 @@ union
 	int ibufferlen;
 	int ibytesrecv;
 	int ibytessent;
+
+	//file buffer data
+	PACKET * packet_collection;
+	int amount_of_packets;
 
 	//host data types
 	char localhost[11];
@@ -176,7 +179,6 @@ union
 					throw "Receive error in server program\n";
 				else
 				{
-					//cout << szbuffer <<endl;
 					std::string msg_converted( reinterpret_cast< char const* >(szbuffer) ); 
 
 					if(msg_converted == "get") //THE REQUEST IS A GET-TYPE
@@ -191,40 +193,120 @@ union
 						else
 						{
 							char filenamebuffer[128];
-							if((ibytesrecv = recv(s1,filenamebuffer,128,0)) == SOCKET_ERROR)  //CLIENT SENDS FILE-NAME TO BE DOWNLOADED.
+							if((ibytesrecv = recv(s1,filenamebuffer,128,0)) == SOCKET_ERROR)  //CLIENT SENDS FILE-NAME TO SERVER.
 								throw "Receive error in server program\n";
 
 							else
 							{
 								std::string file_name_converted( reinterpret_cast< char const* >(filenamebuffer) ); //should be receiving the filename
 
+								//------------------------------------------------------------------------------------------------------------------
 								//PROCESS FILE AND SEND IT BACK....
+								//------------------------------------------------------------------------------------------------------------------
+								ifstream file (file_name_converted, ios::in|ios::binary|ios::ate);
+								  if (file.is_open())
+								  {
+										int filesize = file.tellg();
+										char * memblock = new char [filesize];
+										cout << filesize;
+										file.seekg (0, ios::beg);
+										file.read (memblock, filesize);
+										file.close();
 
+										cout << "the complete file content is in memory";
+
+										//CREATE PACKETS BASED ON SIZE OF FILE
+										amount_of_packets = ceil((filesize/1300.0));
+										int position_of_buffer = 0;
+										packet_collection = new PACKET[amount_of_packets];
+										int packet_number=0;
+										int byte_in_packet=0;
+										int dummy=0;
+
+										for(packet_number=0; packet_number< amount_of_packets; packet_number++)
+										{
+											for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
+											{
+												if(position_of_buffer < filesize)
+												{
+													memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
+													if(byte_in_packet==1299)
+														memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1); //LAST CHAR MUST BE A END
+													continue;
+												}
+											}
+										}
+
+										cout << "finished packaging file!";
+
+										delete[] memblock; //get rid of the in-memory buffer storage.
+								  }
+
+								  else 
+									  throw "Unable to open file";
+								//------------------------------------------------------------------------------------------------------------------
+								//------------------------------------------------------------------------------------------------------------------
+								//------------------------------------------------------------------------------------------------------------------
+
+								//NOW AFTER BREAKING THE BINARY FILE IN PARTS, WE WILL NOW SEND IT IN PIECES. 
+								// 1. SEND NUMBER OF PACKETS TO SEND.
+								// 2. CLIENT SAYS "GO"
+								// 3. SEND.
+								// 4. WAIT FOR RESPONSE OF RECEIPT
+								// 5. 5.1 - IF RESPONSE == "ACCEPTED", THEN SEND ANOTHER PACKET
+								//    5.2 - IF RESPONSE == "FAILED", THEN SEND THE SAME PACKET OVER AGAIN. (BUT TCP ENSURES SUCCESS, SO NOT SURE IF WE WILL DO STEP 5.2)
+								// 4. REPEAT STEP 5 UNTIL LAST PACKET.
 								cout << "process file and send it back :) " << file_name_converted << endl;
 
+								sprintf_s(response_msg,"ok");
+
+								char int_to_char[128];
+								itoa (amount_of_packets,int_to_char,10); //convert int to char array
+								
+								if(send(s1,int_to_char,128,0)==SOCKET_ERROR) //SERVER SENDS THE TOTAL # OF DATA CHUNKS TO SEND.
+									throw "Send error in server program\n";
+								else
+								{
+									char start_command[128];
+									if(recv(s1,start_command,128,0) == SOCKET_ERROR) // WAIT FOR 'start' command from client
+										throw "get data failed 1\n";
+									else
+									{
+										std::string start_command_string_form( reinterpret_cast< char const* >(start_command) );
+
+										if(start_command_string_form=="start")
+										{
+											// in a for loop, we send each packet, piece by piece.
+											for(int packet_counter=0; packet_counter < amount_of_packets; packet_counter++)
+											{
+												if(send(s1,packet_collection[packet_counter].data,1300,0)==SOCKET_ERROR) //SERVER SENDS data.
+													throw "Send error in server program\n";
+												else
+												{
+												}
+
+												char receive_msg[128];
+												if((ibytesrecv = recv(s1,receive_msg,128,0)) == SOCKET_ERROR) // WAIT FOR 'received' msg from client
+													throw "get data failed 2\n";
+												else
+												{
+													//cout << "client received packet successfully :)" << endl;
+												}
+											}
+										}
+									}
+								}
+
+								int test;
+								cin >> test;
 							}
 						}
 					}
 
 					else if(msg_converted == "put")
 					{
-
+						//TODO
 					}
-					/*
-					int var;
-					cout << szbuffer << endl;
-					cout << "NEXT PLEASE..." << endl;
-					//memset(&szbuffer,' ',1500);
-					cout << "YES..." << endl;
-					Sleep(5000);
-					//Send to Client the received message (echo it back).
-					ibufferlen = strlen(szbuffer);
-					sprintf_s(szbuffer,"returned msg"); 
-					if((ibytessent = send(s1,szbuffer,ibufferlen,0))==SOCKET_ERROR)
-						throw "error in send in server program\n";
-					else{ cout << "msg sent to client" << endl; 
-						continue;}
-					*/
 				}
 
 				//Print reciept of successful message. 
@@ -235,7 +317,9 @@ union
 		} //try loop
 
 		//Display needed error message.
-		catch(char* str) { cerr<<str<<WSAGetLastError()<<endl;}
+		catch(char* str) { cerr<<str<<WSAGetLastError()<<endl;
+										int test;
+								cin >> test;}
 
 		//close Client socket
 		closesocket(s1);		
@@ -246,8 +330,7 @@ union
 		/* When done uninstall winsock.dll (WSACleanup()) and exit */ 
 		WSACleanup();
 		return 0;
-	}
-
-
+	}// END OF MAIN
+	
 
 

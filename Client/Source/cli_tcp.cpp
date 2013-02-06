@@ -284,96 +284,18 @@ int main(void)
 		  //*******************************************************************************************************************************
 		  //*******************************************************************************************************************************
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //PUT REQUEST FROM CLIENT TO SERVER
 		  //PUTTING A FILE ON THE SERVER.
 		  else if(type_of_transfer == "put")
 		  {
-			 /* 
-		      ifstream file (filename, ios::in|ios::binary|ios::ate);
-			  if (file.is_open())
-			  {
-					filesize = file.tellg();
-					memblock = new char [filesize];
-					cout << filesize;
-					file.seekg (0, ios::beg);
-					file.read (memblock, filesize);
-					file.close();
-
-					cout << "the complete file content is in memory";
-
-					//CREATE PACKETS BASED ON SIZE OF FILE
-					memblock[3];
-
-					amount_of_packets = ceil((filesize/1300.0));
-					int position_of_buffer = 0;
-					packet_collection = new PACKET[amount_of_packets];
-					int packet_number=0;
-					int byte_in_packet=0;
-					int dummy=0;
-
-					for(packet_number=0; packet_number< amount_of_packets; packet_number++)
-					{
-						for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
-						{
-							if(position_of_buffer < filesize)
-							{
-								memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
-								if(byte_in_packet==1299)
-									memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1);
-								continue;
-							}
-						}
-					}
-
-					cout << "finished packaging file!";
-
-					delete[] memblock; //get rid of the in-memory buffer storage.
-			  }
-
-			  else 
-				  throw "Unable to open file";
-
-			  //sprintf_s(szbuffer,"hello world!\r\n"); 
-			  cout << "AMOUNT OF PACKETS: " << amount_of_packets << endl;
-			  for(int packet_counter=0; packet_counter < 1 ; packet_counter++)
-			  {
-				cout << packet_collection[packet_counter].data << endl;
-				ibytessent=0;    
-				ibufferlen = strlen(packet_collection[100].data);
-				ibytessent = send(s,packet_collection[100].data,ibufferlen,0);
-				if (ibytessent == SOCKET_ERROR)
-					throw "Send failed\n";  
-			  }
-			  //cout << "END OF FOR LOOP!!!!" << endl;
-
-			  //wait for reception of server response.
-			  ibytesrecv=0; 
-			  //cout << "WE REACHED THE WAITING LINE...." << endl;
-			  if((ibytesrecv = recv(s,szbuffer,128,0)) == SOCKET_ERROR)
-				  throw "Receive failed\n";
-			  else
-				cout << "Packet Received by Server Successfully - Msg from server:" << szbuffer << endl;
-			  */
+			//TODO
 		  }//end of if-put block
-
-
-			
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
+		  //*******************************************************************************************************************************
 	} // try loop
 
 	//Display any needed error response

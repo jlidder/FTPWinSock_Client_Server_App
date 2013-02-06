@@ -60,10 +60,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\server.cpp" />
     <ClCompile Include="Source\ser_tcp.cpp" />
     <ClCompile Include="Source\Thread.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\server.h" />
     <ClInclude Include="Source\Thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -70,10 +70,8 @@ void WriteToFile(char * filename, char * data)
 	std::string filename_string_format( reinterpret_cast< char const* >(filename) );
 	outputFile.open(filename_string_format); //test.pdf is a temp var. We will get rid of this in the next commit or something
 
-	for(int file_counter=0; file_counter < strlen(data); file_counter++)
-	{
-		outputFile << data[file_counter];
-	}
+	outputFile << data;
+
 	outputFile.close();
 }
 //------------------------------------------------------------------------------------------------------------------------------------

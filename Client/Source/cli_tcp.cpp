@@ -258,16 +258,10 @@ int main(void)
 								//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 								//###################################################################################
-								//write entire array into file
-								//fstream file_stream; 
-								//cout << filename<<endl;
-								//file_stream.open("demo.pdf");
-								//file_stream.write(file_data_buffer_TOBEWRITTEN, total_bytes_of_file);
-								//file_stream.close();
-
+								//write bytes into file.filename
 								ofstream outputFile;
-								outputFile.open("test.pdf"); //test.pdf is a temp var. We will get rid of this in the next commit or something
-
+								std::string filename_string_format( reinterpret_cast< char const* >(filename) );
+								outputFile.open(filename_string_format); //test.pdf is a temp var. We will get rid of this in the next commit or something
 								for(int file_counter=0; file_counter < total_bytes_of_file; file_counter++)
 								{
 									outputFile << file_data_buffer_TOBEWRITTEN[file_counter];

@@ -32,7 +32,7 @@ SOCKADDR_IN sa;         // filled by bind
 SOCKADDR_IN sa_in;      // fill with server info, IP, port
 
 //buffer data types
-char szbuffer[128]; //1500 buffer size. We expect to use 1200 for actual raw data + 300 saved for header info and other info.
+char szbuffer[128]; 
 char *buffer;
 int ibufferlen=0;
 int ibytessent;
@@ -61,6 +61,7 @@ char localhost[11],
 HANDLE test;
 DWORD dwtest;
 
+#define ARRAY_SIZE(array) (sizeof((array))/sizeof((array[0])))
 						//reference for used structures
 
 						/*  * Host structure
@@ -82,6 +83,26 @@ DWORD dwtest;
 						 struct  in_addr sin_addr;
 						 char    sin_zero[8];
 						 }; */
+
+//------------------------------------------------------------------------------------------------------------------------------------
+//FUNCTIONS TO BE USED BY MAIN()------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
+void WriteToFile(char * filename, char * data)
+{
+	//write bytes into file
+	ofstream outputFile;
+	std::string filename_string_format( reinterpret_cast< char const* >(filename) );
+	outputFile.open(filename_string_format); //test.pdf is a temp var. We will get rid of this in the next commit or something
+
+	for(int file_counter=0; file_counter < strlen(data); file_counter++)
+	{
+		outputFile << data[file_counter];
+	}
+	outputFile.close();
+}
+//------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
 
 int main(void)
 {
@@ -258,18 +279,10 @@ int main(void)
 								//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 								//###################################################################################
-								//write bytes into file.filename
-								ofstream outputFile;
-								std::string filename_string_format( reinterpret_cast< char const* >(filename) );
-								outputFile.open(filename_string_format); //test.pdf is a temp var. We will get rid of this in the next commit or something
-								for(int file_counter=0; file_counter < total_bytes_of_file; file_counter++)
-								{
-									outputFile << file_data_buffer_TOBEWRITTEN[file_counter];
-								}
-								outputFile.close();
+								//write bytes into file
+								WriteToFile(filename,file_data_buffer_TOBEWRITTEN);
 								//###################################################################################
 							}
-
 						}
 					}
 				}

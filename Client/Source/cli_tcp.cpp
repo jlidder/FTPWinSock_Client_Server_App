@@ -4,9 +4,8 @@
 // 1999 June 30 // 2013 January 29
 
 char* getmessage(char *);
-/* send and receive codes between client and server */
-/* This is your basic WINSOCK shell */
-#pragma comment( linker, "/defaultlib:ws2_32.lib" )
+
+#pragma comment( linker, "/defaultlib:ws2_32.lib" ) // basic WINSOCK shell
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <winsock.h>
@@ -60,28 +59,6 @@ char localhost[11],
 //other
 HANDLE test;
 DWORD dwtest;
-
-//reference for used structures
-
-/*  * Host structure
-
-struct  hostent {
-char    FAR * h_name;             official name of host *
-char    FAR * FAR * h_aliases;    alias list *
-short   h_addrtype;               host address type *
-short   h_length;                 length of address *
-char    FAR * FAR * h_addr_list;  list of addresses *
-#define h_addr  h_addr_list[0]            address, for backward compat *
-};
-
-* Socket address structure
-
-struct sockaddr_in {
-short   sin_family;
-u_short sin_port;
-struct  in_addr sin_addr;
-char    sin_zero[8];
-}; */
 
 //------------------------------------------------------------------------------------------------------------------------------------
 //FUNCTIONS TO BE USED BY MAIN()------------------------------------------------------------------------------------------------------

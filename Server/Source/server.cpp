@@ -215,14 +215,14 @@ void TcpThread::run()
 				buffer="WSAStartup was suuccessful\n";   
 				WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
 
-				/* display the wsadata structure */
+				/* display the wsadata structure 
 				cout<< endl
 					<< "wsadata.wVersion "       << wsadata.wVersion       << endl
 					<< "wsadata.wHighVersion "   << wsadata.wHighVersion   << endl
 					<< "wsadata.szDescription "  << wsadata.szDescription  << endl
 					<< "wsadata.szSystemStatus " << wsadata.szSystemStatus << endl
 					<< "wsadata.iMaxSockets "    << wsadata.iMaxSockets    << endl
-					<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;
+					<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;*/
 			}  
 
 			//Display info of local host
@@ -256,6 +256,22 @@ void TcpThread::run()
 
 				else if (FD_ISSET(s,&readfds))  cout << "got a connection request" << endl; 
 
+				//-------------------------------------------------------------------------------------------------------
+				//receive user name....
+				char user_name[128];
+				char server_request_response[128];
+				if((ibytesrecv = recv(CLIENT_SOCKET,user_name,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH "OK" RESPONSE
+					throw "get failed\n";
+
+				char user_name_response[128];
+				sprintf_s(user_name_response,"ok");
+				if (send(CLIENT_SOCKET,user_name_response, 128, 0) == SOCKET_ERROR) // TELL THE SERVER THE USER NAME
+					throw "get failed\n";  
+
+				std::string user_name_converted( reinterpret_cast< char const* >(user_name) ); //should be receiving the filename
+				//delete[] user_name_response;
+				//-------------------------------------------------------------------------------------------------------
+
 				//Fill in szbuffer from accepted request.
 				if((ibytesrecv = recv(CLIENT_SOCKET,szbuffer,128,0)) == SOCKET_ERROR) //CLIENT SENDS THIS SERVER A REQUEST TYPE.
 					throw "Receive error in server program\n";
@@ -277,11 +293,17 @@ void TcpThread::run()
 						std::string file_name_converted( reinterpret_cast< char const* >(filenamebuffer) ); //should be receiving the filename
 
 						//------------------------------------------------------------------------------------------------------------------
-						//PROCESS FILE AND SEND IT BACK....
+						//CHECK IF FILE EXISTS , THEN PROCESS FILE AND SEND IT BACK. IF FILE DOES NOT EXIST, THEN WE SEND A ERROR BACK TO CLIENT.
 						//------------------------------------------------------------------------------------------------------------------
 						ifstream file (file_name_converted, ios::in|ios::binary|ios::ate);
 						if (file.is_open())
 						{
+								char confirmation_msg[128];
+								sprintf_s(confirmation_msg,"fileexists");
+
+								if(send(CLIENT_SOCKET,confirmation_msg,128,0)==SOCKET_ERROR)
+									throw "Send error in server program\n";
+
 								int filesize = file.tellg();
 								char * memblock = new char [filesize];
 								file.seekg (0, ios::beg);
@@ -313,7 +335,21 @@ void TcpThread::run()
 						}
 
 						else 
-								throw "Unable to open file";
+						{
+							//ERROR CASE: Check if file exists....
+							char error_msg[128];
+							sprintf_s(error_msg,"nofile");
+
+							if(send(CLIENT_SOCKET,error_msg,128,0)==SOCKET_ERROR) 
+								throw "Send error in server program\n";
+
+							throw "Unable to open file";
+						}
+
+						char hostname[128];
+						gethostname(hostname,CLIENT_SOCKET); //user_name
+						cout << "User "<< user_name_converted << " requested file " << file_name_converted << " to be sent." << endl;
+
 						//------------------------------------------------------------------------------------------------------------------
 						//------------------------------------------------------------------------------------------------------------------
 						//------------------------------------------------------------------------------------------------------------------
@@ -342,6 +378,7 @@ void TcpThread::run()
 
 						if(start_command_string_form=="start")
 						{
+								cout << "Sending file to "<< hostname << ", waiting........"<<endl;
 								// in a for loop, we send each packet, piece by piece.
 								for(int packet_counter=0; packet_counter < amount_of_packets; packet_counter++)
 								{
@@ -353,6 +390,7 @@ void TcpThread::run()
 										if((ibytesrecv = recv(CLIENT_SOCKET,receive_msg,128,0)) == SOCKET_ERROR) // WAIT FOR 'received' msg from client
 												throw "get data failed 2\n";
 								}
+								cout << "File Transfer to "<< hostname << " is complete !!!"<<endl;;
 						}											
 				}
 
@@ -374,11 +412,16 @@ void TcpThread::run()
 
 						std::string file_name_converted( reinterpret_cast< char const* >(file_name) );
 
+						//message
+						char hostname[128];
+						gethostname(hostname,CLIENT_SOCKET);
+						cout << "User "<< user_name_converted << " requested to put the file " << file_name_converted << " on the server." << endl;
+
 						if (send(CLIENT_SOCKET,request_response, 128, 0) == SOCKET_ERROR) // TELL THE CLIENT WE GOT THE REQUEST.
 							throw "get failed\n";  
 
 						char size_chunk[128];
-						if((ibytesrecv = recv(CLIENT_SOCKET,size_chunk,128,0)) == SOCKET_ERROR) // WAIT FOR THE FILE NAME FROM THE CLIENT
+						if((ibytesrecv = recv(CLIENT_SOCKET,size_chunk,128,0)) == SOCKET_ERROR) // WAIT FOR THE # OF PACKETS.
 							throw "get failed\n";
 
 
@@ -393,6 +436,9 @@ void TcpThread::run()
 
 						if (send(CLIENT_SOCKET,request_response, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
 							throw "file transfer initiation failed\n";  
+
+						//message
+						cout << "Receiving file from "<< hostname << ".........."<<endl;
 
 						for(int receive_loop=0; receive_loop < data_chunk_int_form; receive_loop++) // RECEIVE EACH DATA CHUNK
 						{
@@ -438,26 +484,25 @@ void TcpThread::run()
 						//write bytes into file
 						WriteToFile(file_name,file_data_buffer_TOBEWRITTEN);
 						//###################################################################################
-
-
+						
+						//message
+						cout << "File "<< file_name << " from "<< hostname << " received !"<<endl;
 				}
-
 		} //end of try 
 
 		//Display needed error message.
 		catch(char* str)
 		{ 
 			cerr<<str<<WSAGetLastError()<<endl;
-			int test;
-			cin >> test;
 		}
 
 		//close Client socket
 		closesocket(CLIENT_SOCKET);		
 
-		cout << "SERVER IS DONE" << endl;
 		/* When done uninstall winsock.dll (WSACleanup()) and exit */ 
 		WSACleanup();
+
+		cout << "waiting for new connection......" << endl;
 }
 
 

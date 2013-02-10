@@ -90,14 +90,14 @@ int main(void)
 			buffer="WSAStartup was successful\n";   
 			WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
 
-			/* Display the wsadata structure */
+			/* Display the wsadata structure 
 			cout<< endl
 				<< "wsadata.wVersion "       << wsadata.wVersion       << endl
 				<< "wsadata.wHighVersion "   << wsadata.wHighVersion   << endl
 				<< "wsadata.szDescription "  << wsadata.szDescription  << endl
 				<< "wsadata.szSystemStatus " << wsadata.szSystemStatus << endl
 				<< "wsadata.iMaxSockets "    << wsadata.iMaxSockets    << endl
-				<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;
+				<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;*/
 		}  
 
 		//Display name of local host.
@@ -140,13 +140,24 @@ int main(void)
 		  char * memblock;
 		  char filename[128];
 		  string type_of_transfer;
+		  char user_name[128];
+
+		  cout << "Type in your user name: ";
+		  cin >> user_name;
 
 		  cout << "Type name of file to be transferred: ";
 		  cin >> filename;
 
 		  cout << "Type direction of transfer: ";
 		  cin >> type_of_transfer;
-		  //cout << "Sent requst to "<<remotehost<<". Handshaking...."<<endl;
+		  
+		  //send user name....
+		  if (send(s,user_name, 128, 0) == SOCKET_ERROR) // TELL THE SERVER THE USER NAME
+			throw "get failed\n";  
+
+		  char server_request_response[128];
+		  if((ibytesrecv = recv(s,server_request_response,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH "OK" RESPONSE
+			throw "get failed\n";
 
 		  //*******************************************************************************************************************************
 		  //*******************************************************************************************************************************
@@ -173,6 +184,21 @@ int main(void)
 			{
 				if (send(s,filename, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
 					throw "file transfer initiation failed\n";  
+
+				//--------------------------------------------------
+				//ERROR CHECK: server says if file exists or not....
+				char file_check_response[128];
+				if((ibytesrecv = recv(s,file_check_response,128,0)) == SOCKET_ERROR) // WAIT FOR response if file exists
+					throw "get data failed\n";
+
+				std::string file_server_check( reinterpret_cast< char const* >(file_check_response) );
+
+				if(file_server_check == "nofile")
+				{
+					cout << "File does not exist on server!" << endl;
+					throw "this file does not exist on server!";
+				}
+				//--------------------------------------------------
 
 				char num_of_data_chunks_to_receive[128];
 
@@ -316,7 +342,10 @@ int main(void)
 				}
 
 				else 
-						throw "Unable to open file";
+				{
+					cout << "could not open file!" << endl;
+					throw "Unable to open file";
+				}
 				//------------------------------------------------------------------------------------------------------------------
 				//------------------------------------------------------------------------------------------------------------------
 				//------------------------------------------------------------------------------------------------------------------
@@ -367,8 +396,6 @@ int main(void)
 	{
 		cerr<<str<<":"<<dec<<WSAGetLastError()<<endl;
 		cout << "error occured....";
-		int testvar;
-		cin >> testvar;
 	}
 
 	//close the client socket

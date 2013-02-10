@@ -73,6 +73,24 @@ fd_set readfds;
 HANDLE test;
 DWORD dwtest;
 
+//------------------------------------------------------------------------------------------------------------------------------------
+//FUNCTIONS TO BE USED BY MAIN()------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
+void WriteToFile(char * filename, char * data)
+{
+	//write bytes into file
+	ofstream outputFile;
+	std::string filename_string_format( reinterpret_cast< char const* >(filename) );
+	outputFile.open(filename_string_format); 
+
+	outputFile << data;
+
+	outputFile.close();
+}
+//------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------
+
 TcpServer::TcpServer()
 {
 	WSADATA wsadata;
@@ -338,9 +356,90 @@ void TcpThread::run()
 						}											
 				}
 
+				//-----------------------------------
 				else if(msg_converted == "put")
 				{
-						//TODO
+						char request_response[128]; 
+
+						sprintf_s(request_response,"ok");
+			
+						ibytessent=0; 
+						ibufferlen = strlen(request_response);
+						if (send(CLIENT_SOCKET,request_response, 128, 0) == SOCKET_ERROR) // TELL THE CLIENT WE GOT THE REQUEST.
+							throw "get failed\n";  
+
+						char file_name[128];
+						if((ibytesrecv = recv(CLIENT_SOCKET,file_name,128,0)) == SOCKET_ERROR) // WAIT FOR THE FILE NAME FROM THE CLIENT
+							throw "get failed\n";
+
+						std::string file_name_converted( reinterpret_cast< char const* >(file_name) );
+
+						if (send(CLIENT_SOCKET,request_response, 128, 0) == SOCKET_ERROR) // TELL THE CLIENT WE GOT THE REQUEST.
+							throw "get failed\n";  
+
+						char size_chunk[128];
+						if((ibytesrecv = recv(CLIENT_SOCKET,size_chunk,128,0)) == SOCKET_ERROR) // WAIT FOR THE FILE NAME FROM THE CLIENT
+							throw "get failed\n";
+
+
+						//setup file chunks to be received
+						std::string data_chunk_string_form( reinterpret_cast< char const* >(size_chunk) );
+						int data_chunk_int_form = atoi(data_chunk_string_form.c_str());
+
+						packet_collection = new PACKET[data_chunk_int_form]; //setting up the data collection
+						int total_bytes_of_file = data_chunk_int_form*1300;
+
+						sprintf_s(request_response,"start");
+
+						if (send(CLIENT_SOCKET,request_response, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
+							throw "file transfer initiation failed\n";  
+
+						for(int receive_loop=0; receive_loop < data_chunk_int_form; receive_loop++) // RECEIVE EACH DATA CHUNK
+						{
+							/*
+							 * FILE RECEIVE LOGIC GOES HERE! (probably a for loop. LOOP(request <--> response) )
+							 */
+							char data_chunk[1300];
+							if((ibytesrecv = recv(CLIENT_SOCKET,data_chunk,1300,0)) == SOCKET_ERROR) // WAIT FOR THE DATA CHUNK TO BE SENT.
+								throw "get data failed\n";
+
+							for(int data_byte=0; data_byte<1300; data_byte++) //GO THROUGH EACH BYTE IN DATA CHUNK AND DEEP COPY IT OVER TO ITS RESPECTIVE PACKET.
+							{
+								memcpy (&packet_collection[receive_loop].data[data_byte], &data_chunk[data_byte],1);
+								if(receive_loop==1299)
+									memcpy (&packet_collection[receive_loop].data[receive_loop+1], "\0" ,1);
+							}
+					
+							char receive_msg[128];
+							sprintf_s(receive_msg,"received");
+
+							if (send(CLIENT_SOCKET,receive_msg, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
+								throw "file transfer initiation failed\n";  
+						}//end of for-loop which waits for receiving each data chunk
+
+						//finished file transfer over. We need to marshal the data into its respective file type
+						char * file_data_buffer_TOBEWRITTEN = new char[total_bytes_of_file];
+
+						//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+						//take all fragmented data and put it all together. (unify data chunks)
+						int marshalcounter=0;
+
+						for (int packet_collection_counter=0; packet_collection_counter < data_chunk_int_form; packet_collection_counter++)
+						{
+							for(int bytes_in_packet_counter=0;bytes_in_packet_counter<1300;bytes_in_packet_counter++)
+							{
+								memcpy (&file_data_buffer_TOBEWRITTEN[marshalcounter], &packet_collection[packet_collection_counter].data[bytes_in_packet_counter],1);
+								marshalcounter++;
+							}
+						}
+						//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+						//###################################################################################
+						//write bytes into file
+						WriteToFile(file_name,file_data_buffer_TOBEWRITTEN);
+						//###################################################################################
+
+
 				}
 
 		} //end of try 

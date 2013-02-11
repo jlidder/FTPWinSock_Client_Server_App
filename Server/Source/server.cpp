@@ -324,12 +324,22 @@ void TcpThread::run()
 								{
 									for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
 									{
+										
 										if(position_of_buffer < filesize)
 										{
+											if(position_of_buffer<filesize-1)
+											{
 											memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
 											if(byte_in_packet==1299)
 												memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1); //LAST CHAR MUST BE A END
 											continue;
+											}
+											else 
+											{
+												memcpy (&packet_collection[packet_number].data[byte_in_packet], "\0" ,1);
+												continue;
+											}
+
 										}
 									}
 								}
@@ -516,5 +526,4 @@ int main(void)
 	
 	return 0;
 }
-
 

@@ -112,7 +112,6 @@ int main(void)
 			throw "gethostbyname failed\n";
 
 		//Ask for name of remote server
-
 		cout << "Type name of ftp server :" << flush ;   
 		cin >> remotehost ;
 		if((rp=gethostbyname(remotehost)) == NULL)
@@ -232,7 +231,7 @@ int main(void)
 					char data_chunk[1300];
 					if((ibytesrecv = recv(s,data_chunk,1300,0)) == SOCKET_ERROR) // WAIT FOR THE DATA CHUNK TO BE SENT.
 						throw "get data failed\n";
-
+					cout << "First Bytes are arriving...." << endl;
 					for(int data_byte=0; data_byte<1300; data_byte++) //GO THROUGH EACH BYTE IN DATA CHUNK AND DEEP COPY IT OVER TO ITS RESPECTIVE PACKET.
 					{
 						memcpy (&packet_collection[receive_loop].data[data_byte], &data_chunk[data_byte],1);
@@ -268,6 +267,7 @@ int main(void)
 				//write bytes into file
 				WriteToFile(filename,file_data_buffer_TOBEWRITTEN);
 				//###################################################################################
+				cout << "File has arrived!" << endl;
 			}
 			else
 				throw "Server Denied request!";

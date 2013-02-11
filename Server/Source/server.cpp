@@ -101,8 +101,10 @@ TcpServer::TcpServer()
 	if(gethostname(servername,HOSTNAME_LENGTH)!=0) //get the hostname
 		TcpThread::err_sys("Get the host name error,exit");
 	
-	printf("Server: %s waiting to be contacted for time/size request...\n",servername);
-	
+	//printf("Multi-threaded FTP Server Started :) \n");
+	//printf("Server: %s waiting to be contacted for time/size request...\n",servername); //ftpd_tcp starting at host: [sun] waiting to be contacted for transferring files...
+	printf("ftpd_tcp starting at host: %s \n",servername);
+	printf("waiting to be contacted for transferring files... \n"); 
 	
 	//Create the server socket
 	if ((serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -225,9 +227,9 @@ void TcpThread::run()
 					<< "wsadata.iMaxUdpDg "      << wsadata.iMaxUdpDg      << endl;*/
 			}  
 
-			//Display info of local host
-			gethostname(localhost,10);
-			cout<<"ftpd_tcp starting at host: "<<localhost<< endl;
+			//Display info of local host 
+			gethostname(localhost,128);
+			//cout<<"ftpd_tcp starting at host: "<<localhost<< endl;
 
 			if((hp=gethostbyname(localhost)) == NULL) 
 			{
@@ -239,14 +241,14 @@ void TcpThread::run()
 			//Successfull bind, now listen for client requests.
 			if(listen(SERVER_SOCKET,10) == SOCKET_ERROR)
 				throw "couldn't  set up listen on socket";
-			else cout << "Listen was successful" << endl;
+			//else cout << "Listen was successful" << endl;
 
 			FD_ZERO(&readfds);
 
 			int close_command=0;
 			//wait loop
 
-			cout << "waiting to be contacted for transferring files..." << endl;
+			//cout << "waiting to be contacted for transferring files..." << endl;
 
 				FD_SET(SERVER_SOCKET,&readfds);  //always check the listener
 
@@ -269,7 +271,7 @@ void TcpThread::run()
 					throw "get failed\n";  
 
 				std::string user_name_converted( reinterpret_cast< char const* >(user_name) ); //should be receiving the filename
-				//delete[] user_name_response;
+
 				//-------------------------------------------------------------------------------------------------------
 
 				//Fill in szbuffer from accepted request.
@@ -348,7 +350,7 @@ void TcpThread::run()
 
 						char hostname[128];
 						gethostname(hostname,CLIENT_SOCKET); //user_name
-						cout << "User "<< user_name_converted << " requested file " << file_name_converted << " to be sent." << endl;
+						cout << "User '"<< user_name_converted << "' requested file " << file_name_converted << " to be sent." << endl;
 
 						//------------------------------------------------------------------------------------------------------------------
 						//------------------------------------------------------------------------------------------------------------------
@@ -378,7 +380,7 @@ void TcpThread::run()
 
 						if(start_command_string_form=="start")
 						{
-								cout << "Sending file to "<< hostname << ", waiting........"<<endl;
+								cout << "Sending file to "<< user_name_converted << ", waiting........"<<endl;
 								// in a for loop, we send each packet, piece by piece.
 								for(int packet_counter=0; packet_counter < amount_of_packets; packet_counter++)
 								{
@@ -390,7 +392,7 @@ void TcpThread::run()
 										if((ibytesrecv = recv(CLIENT_SOCKET,receive_msg,128,0)) == SOCKET_ERROR) // WAIT FOR 'received' msg from client
 												throw "get data failed 2\n";
 								}
-								cout << "File Transfer to "<< hostname << " is complete !!!"<<endl;;
+								cout << "File Transfer to "<< user_name_converted << " is complete !!!"<<endl;;
 						}											
 				}
 
@@ -438,7 +440,7 @@ void TcpThread::run()
 							throw "file transfer initiation failed\n";  
 
 						//message
-						cout << "Receiving file from "<< hostname << ".........."<<endl;
+						cout << "Receiving file from "<< user_name_converted << ".........."<<endl;
 
 						for(int receive_loop=0; receive_loop < data_chunk_int_form; receive_loop++) // RECEIVE EACH DATA CHUNK
 						{
@@ -486,7 +488,7 @@ void TcpThread::run()
 						//###################################################################################
 						
 						//message
-						cout << "File "<< file_name << " from "<< hostname << " received !"<<endl;
+						cout << "File "<< file_name << " from "<< user_name_converted << " received !"<<endl;
 				}
 		} //end of try 
 

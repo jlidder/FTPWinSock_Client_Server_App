@@ -18,8 +18,12 @@ char* getmessage(char *);
 #include <math.h>
 #include "string"
 #include <vector>
+#include <windows.h>
+#include <Lmcons.h>
 
 using namespace std;
+
+#define USERNAMEBUFFER 128
 
 //user defined port number
 #define REQUEST_PORT 0x7070;
@@ -126,8 +130,8 @@ int main(void)
 		sa_in.sin_port = htons(port);
 
 		//Display the host machine internet address
-		cout << "Connecting to remote host:";
-		cout << inet_ntoa(sa_in.sin_addr) << endl;
+		//cout << "Connecting to remote host:";
+		//cout << inet_ntoa(sa_in.sin_addr) << endl;
 
 		//Connect Client to the server
 		if (connect(s,(LPSOCKADDR)&sa_in,sizeof(sa_in)) == SOCKET_ERROR)
@@ -142,17 +146,18 @@ int main(void)
 		  string type_of_transfer;
 		  char user_name[128];
 
-		  cout << "Type in your user name: ";
-		  cin >> user_name;
-
 		  cout << "Type name of file to be transferred: ";
 		  cin >> filename;
 
 		  cout << "Type direction of transfer: ";
 		  cin >> type_of_transfer;
 		  
+		  TCHAR username [ UNLEN + 1 ];
+		  DWORD size = UNLEN + 1;
+		  GetUserName( (TCHAR*)username, &size );
+
 		  //send user name....
-		  if (send(s,user_name, 128, 0) == SOCKET_ERROR) // TELL THE SERVER THE USER NAME
+		  if (send(s,username, 128, 0) == SOCKET_ERROR) // TELL THE SERVER THE USER NAME
 			throw "get failed\n";  
 
 		  char server_request_response[128];

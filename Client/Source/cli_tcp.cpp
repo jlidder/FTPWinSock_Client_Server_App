@@ -3,7 +3,7 @@
 // J.W. Atwood & Jaspreet Singh Lidder
 // 1999 June 30 // 2013 January 29
 
-char* getmessage(char *);
+//char* getmessage(char *);
 
 #pragma comment( linker, "/defaultlib:ws2_32.lib" ) // basic WINSOCK shell
 #include <winsock2.h>
@@ -70,8 +70,8 @@ DWORD dwtest;
 void WriteToFile(char * filename, char * data)
 {
 	//write bytes into file
-	ofstream outputFile;
-	std::string filename_string_format( reinterpret_cast< char const* >(filename) );
+	ofstream outputFile(filename,ios::in|ios::binary);
+	string filename_string_format( reinterpret_cast< char const* >(filename) );
 	outputFile.open(filename_string_format); 
 
 	outputFile << data;
@@ -92,7 +92,7 @@ int main(void)
 		else 
 		{
 			buffer="WSAStartup was successful\n";   
-			WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
+			//WriteFile(test,buffer,sizeof(buffer),&dwtest,NULL); 
 
 			/* Display the wsadata structure 
 			cout<< endl
@@ -140,11 +140,9 @@ int main(void)
 		   - don't forget to append <carriage return>  */
 
 		  ifstream::pos_type filesize;
-		  char * memblock;
 		  char filename[128];
 		  string type_of_transfer;
-		  char user_name[128];
-
+	
 		  cout << "Type name of file to be transferred: ";
 		  cin >> filename;
 
@@ -183,7 +181,7 @@ int main(void)
 			if((ibytesrecv = recv(s,server_request_response,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH "OK" RESPONSE TO GET REQUEST
 				throw "get failed\n";
 
-			std::string server_msg_converted( reinterpret_cast< char const* >(server_request_response) );
+			string server_msg_converted( reinterpret_cast< char const* >(server_request_response) );
 			if(server_msg_converted=="ok")//server responded with OK. we can now prepare for file transfer.
 			{
 				if (send(s,filename, 128, 0) == SOCKET_ERROR)// TELL THE SERVER, THE FILE NAME TO BE TRANSFERED OVER.
@@ -195,7 +193,7 @@ int main(void)
 				if((ibytesrecv = recv(s,file_check_response,128,0)) == SOCKET_ERROR) // WAIT FOR response if file exists
 					throw "get data failed\n";
 
-				std::string file_server_check( reinterpret_cast< char const* >(file_check_response) );
+				string file_server_check( reinterpret_cast< char const* >(file_check_response) );
 
 				if(file_server_check == "nofile")
 				{
@@ -210,7 +208,7 @@ int main(void)
 					throw "Server could not receive";                                          // THIS WILL HELP US DEFINE A LOOP FOR CONTINIOUS RECEIVE AND SEND MSG'S.
 
 				//setup file chunks to be received
-				std::string data_chunk_string_form( reinterpret_cast< char const* >(num_of_data_chunks_to_receive) );
+				string data_chunk_string_form( reinterpret_cast< char const* >(num_of_data_chunks_to_receive) );
 				int data_chunk_int_form = atoi(data_chunk_string_form.c_str());
 
 				packet_collection = new PACKET[data_chunk_int_form]; //setting up the data collection
@@ -222,6 +220,8 @@ int main(void)
 					throw "file transfer initiation failed\n";  
 
 				int total_bytes_of_file = data_chunk_int_form*1300;
+				char *memblock = new char[total_bytes_of_file];
+				int data_byte=0;
 
 				for(int receive_loop=0; receive_loop < data_chunk_int_form; receive_loop++) // RECEIVE EACH DATA CHUNK
 				{
@@ -231,14 +231,9 @@ int main(void)
 					char data_chunk[1300];
 					if((ibytesrecv = recv(s,data_chunk,1300,0)) == SOCKET_ERROR) // WAIT FOR THE DATA CHUNK TO BE SENT.
 						throw "get data failed\n";
-					cout << "First Bytes are arriving...." << endl;
-					for(int data_byte=0; data_byte<1300; data_byte++) //GO THROUGH EACH BYTE IN DATA CHUNK AND DEEP COPY IT OVER TO ITS RESPECTIVE PACKET.
-					{
-						memcpy (&packet_collection[receive_loop].data[data_byte], &data_chunk[data_byte],1);
-						if(receive_loop==1299)
-							memcpy (&packet_collection[receive_loop].data[receive_loop+1], "\0" ,1);
-					}
-					
+										
+					memcpy (&memblock[data_byte], &data_chunk,1300);
+						
 					char receive_msg[128];
 					sprintf_s(receive_msg,"received");
 
@@ -249,20 +244,8 @@ int main(void)
 				//finished file transfer over. We need to marshal the data into its respective file type
 				char * file_data_buffer_TOBEWRITTEN = new char[total_bytes_of_file];
 
-				//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-				//take all fragmented data and put it all together. (unify data chunks)
-				int marshalcounter=0;
-
-				for (int packet_collection_counter=0; packet_collection_counter < data_chunk_int_form; packet_collection_counter++)
-				{
-					for(int bytes_in_packet_counter=0;bytes_in_packet_counter<1300;bytes_in_packet_counter++)
-					{
-						memcpy (&file_data_buffer_TOBEWRITTEN[marshalcounter], &packet_collection[packet_collection_counter].data[bytes_in_packet_counter],1);
-						marshalcounter++;
-					}
-				}
-				//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+				
+ 
 				//###################################################################################
 				//write bytes into file
 				WriteToFile(filename,file_data_buffer_TOBEWRITTEN);
@@ -293,7 +276,7 @@ int main(void)
 				if((ibytesrecv = recv(s,response,128,0)) == SOCKET_ERROR)  //CLIENT SENDS FILE-NAME TO SERVER.
 					throw "Receive error in server program\n";
 
-				std::string response_converted1( reinterpret_cast< char const* >(response) ); //should be receiving the filename
+				string response_converted1( reinterpret_cast< char const* >(response) ); //should be receiving the filename
 
 				//if response is not OK
 				if(response_converted1 != "ok")
@@ -305,7 +288,7 @@ int main(void)
 				if((ibytesrecv = recv(s,response,128,0)) == SOCKET_ERROR)  //CLIENT SENDS FILE-NAME TO SERVER.
 					throw "Receive error in server program\n";
 
-				std::string response_converted2( reinterpret_cast< char const* >(response) ); //should be receiving the filename
+				string response_converted2( reinterpret_cast< char const* >(response) ); //should be receiving the filename
 
 				if(response_converted2 != "ok") //server is going along...
 					throw "File Name response from server failed.";
@@ -316,14 +299,14 @@ int main(void)
 				ifstream file (filename, ios::in|ios::binary|ios::ate);
 				if (file.is_open())
 				{
-						int filesize = file.tellg();
+						int filesize = (int)file.tellg();
 						char * memblock = new char [filesize];
 						file.seekg (0, ios::beg);
 						file.read (memblock, filesize);
 						file.close();
 
 						//CREATE PACKETS BASED ON SIZE OF FILE
-						amount_of_packets = ceil((filesize/1300.0));
+						amount_of_packets = (int)ceil((filesize/1300.0));
 						int position_of_buffer = 0;
 						packet_collection = new PACKET[amount_of_packets];
 						int packet_number=0;

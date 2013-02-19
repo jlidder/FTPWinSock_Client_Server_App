@@ -38,8 +38,8 @@ union
 	int calen=sizeof(ca); 
 
 //port data types
-#define REQUEST_PORT 0x7070
-int port=REQUEST_PORT;
+#define RREQUEST_PORT 0x7070
+int port=RREQUEST_PORT;
 
 //buffer data types
 char szbuffer[2000];
@@ -111,7 +111,7 @@ TcpServer::TcpServer()
 		TcpThread::err_sys("Create socket error,exit");
 	
 	//Fill-in Server Port and Address info.
-	ServerPort=REQUEST_PORT;
+	ServerPort=RREQUEST_PORT;
 	memset(&ServerAddr, 0, sizeof(ServerAddr));      /* Zero out structure */
 	ServerAddr.sin_family = AF_INET;                 /* Internet address family */
 	ServerAddr.sin_addr.s_addr = htonl(INADDR_ANY);  /* Any incoming interface */
@@ -261,7 +261,6 @@ void TcpThread::run()
 				//-------------------------------------------------------------------------------------------------------
 				//receive user name....
 				char user_name[128];
-				char server_request_response[128];
 				if((ibytesrecv = recv(CLIENT_SOCKET,user_name,128,0)) == SOCKET_ERROR) // SERVER SHOULD RESPOND WITH "OK" RESPONSE
 					throw "get failed\n";
 
@@ -297,7 +296,7 @@ void TcpThread::run()
 						//------------------------------------------------------------------------------------------------------------------
 						//CHECK IF FILE EXISTS , THEN PROCESS FILE AND SEND IT BACK. IF FILE DOES NOT EXIST, THEN WE SEND A ERROR BACK TO CLIENT.
 						//------------------------------------------------------------------------------------------------------------------
-						ifstream file (file_name_converted, ios::in|ios::binary|ios::ate);
+						ifstream file (file_name_converted, ios::out|ios::binary|ios::ate);
 						if (file.is_open())
 						{
 								char confirmation_msg[128];
@@ -306,14 +305,14 @@ void TcpThread::run()
 								if(send(CLIENT_SOCKET,confirmation_msg,128,0)==SOCKET_ERROR)
 									throw "Send error in server program\n";
 
-								int filesize = file.tellg();
+								int filesize = (int)file.tellg();
 								char * memblock = new char [filesize];
 								file.seekg (0, ios::beg);
 								file.read (memblock, filesize);
 								file.close();
 
 								//CREATE PACKETS BASED ON SIZE OF FILE
-								amount_of_packets = ceil((filesize/1300.0));
+								amount_of_packets = (int)ceil((filesize/1300.0));
 								int position_of_buffer = 0;
 								packet_collection = new PACKET[amount_of_packets];
 								int packet_number=0;
@@ -322,29 +321,26 @@ void TcpThread::run()
 
 								for(packet_number=0; packet_number< amount_of_packets; packet_number++)
 								{
-									for(byte_in_packet=0; byte_in_packet<1300; ++byte_in_packet)
+									for(byte_in_packet=0; byte_in_packet<1300;byte_in_packet++)
 									{
 										
-										if(position_of_buffer < filesize)
-										{
-											if(position_of_buffer<filesize-1)
-											{
-											memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
-											if(byte_in_packet==1299)
-												memcpy (&packet_collection[packet_number].data[byte_in_packet+1], "\0" ,1); //LAST CHAR MUST BE A END
-											continue;
-											}
-											else 
+										//if(position_of_buffer <= filesize)
+										//{
+											//if(byte_in_packet==1299)
+											//		memcpy (&packet_collection[packet_number].data[byte_in_packet], "\0" ,1); //LAST CHAR MUST BE A END
+											if(position_of_buffer == filesize)
 											{
 												memcpy (&packet_collection[packet_number].data[byte_in_packet], "\0" ,1);
-												continue;
+												break;
 											}
+											else
+												memcpy (&packet_collection[packet_number].data[byte_in_packet], &memblock[position_of_buffer++],1);
 
-										}
+										}				
 									}
-								}
+								//}//end of buffer for loop
 								delete[] memblock; //get rid of the in-memory buffer storage.
-						}
+						}//end of packet for loop
 
 						else 
 						{
@@ -374,6 +370,9 @@ void TcpThread::run()
 						// 5. 5.1 - IF RESPONSE == "ACCEPTED", THEN SEND ANOTHER PACKET
 						//    5.2 - IF RESPONSE == "FAILED", THEN SEND THE SAME PACKET OVER AGAIN. (BUT TCP ENSURES SUCCESS, SO NOT SURE IF WE WILL DO STEP 5.2)
 						// 4. REPEAT STEP 5 UNTIL LAST PACKET.
+
+
+
 						sprintf_s(response_msg,"ok");
 
 						char int_to_char[128];
@@ -464,8 +463,8 @@ void TcpThread::run()
 							for(int data_byte=0; data_byte<1300; data_byte++) //GO THROUGH EACH BYTE IN DATA CHUNK AND DEEP COPY IT OVER TO ITS RESPECTIVE PACKET.
 							{
 								memcpy (&packet_collection[receive_loop].data[data_byte], &data_chunk[data_byte],1);
-								if(receive_loop==1299)
-									memcpy (&packet_collection[receive_loop].data[receive_loop+1], "\0" ,1);
+								//if(receive_loop==1299)
+									//memcpy (&packet_collection[receive_loop].data[receive_loop+1], "\0" ,1);
 							}
 					
 							char receive_msg[128];

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <fstream>
 #include <windows.h>
+#include <sstream>
 
 #include "aux_cli.h"
 
@@ -33,6 +34,13 @@ int main(void){
 	WSADATA wsadata;
 
 	try {
+
+		FILE * logFile;
+		int n;
+		char name [100];
+		logFile = fopen ("log.txt","a");
+
+
 		if (WSAStartup(0x0202,&wsadata)!=0){  
 			cout<<"Error in starting WSAStartup()" << endl;
 		} else {
@@ -51,11 +59,16 @@ int main(void){
 
 
 		//Display name of local host.
-
 		gethostname(localhost,10);
 		cout<<"Local host name is \"" << localhost << "\"" << endl;
 
-		if((hp=gethostbyname(localhost)) == NULL) 
+		//log
+		char log_msg[128] = "Client: Starting on host: ";
+		fprintf(logFile,strcat(log_msg,localhost));
+		fprintf(logFile,"\n");
+		fclose(logFile);
+
+		if((hp=gethostbyname(localhost)) == NULL)	
 			throw "gethostbyname failed\n";
 
 		//Ask for name of remote server
@@ -131,6 +144,8 @@ int main(void){
                     sprintf(msgFrame.data,"rcvdname");
                     sendNwait(msgFrame);
             }
+			sprintf(msgFrame.data,"donelist");
+			sendNwait(msgFrame);
 		}
 
 		else if (msgFrame.command[0] == 'g' || msgFrame.command[0] == 'G')
@@ -178,7 +193,6 @@ int main(void){
 			if(!strcmp(delete_success_or_failure.c_str() , "success"))
 					throw "file was not deleted successfully on server :(";
 		} 
-
 	} // try loop
 
 	//Display any needed error response.
@@ -191,12 +205,25 @@ int main(void){
 
 	/* When done uninstall winsock.dll (WSACleanup()) and exit */ 
 	WSACleanup();  
+
 	return 0;
 }
 
 
 void hndShake()
 {///initialize to non seqNo
+
+	//preparing log stuff.
+	FILE * logFile;
+	char name [100];
+	logFile = fopen ("log.txt","a");
+	char log_msg_sending[128] = "Client: sent packet: ";
+	char log_msg_receiving[128] = "Client: received ACK for packet: ";
+	char log_msg_3wayhandshake[128] = "Client: 3 way handshaking beginning\n";
+	char log_msg_3wayhandshake_finished[128] = "Client: 3 way handshaking completed! \n";
+
+	fprintf(logFile,log_msg_3wayhandshake);
+
 	msgFrame.client_seqNo = -1;
 	msgFrame.server_seqNo = -1;
 	int serverNo = rand() % 256; //rand number 0 to 255
@@ -204,6 +231,14 @@ void hndShake()
 	cout<<"Sending " << msgFrame.client_number;
 	do
 	{//resends packet until it receives responds
+
+		string pack_num_string;          // string which will contain the result
+		ostringstream convert;   // stream used for the conversion
+		convert << msgFrame.client_number;// insert the textual representation of 'Number' in the characters in the stream
+		pack_num_string = convert.str(); // set 'Result' to the contents of the stream
+		fprintf(logFile,strcat(log_msg_sending,pack_num_string.c_str()));
+	    fprintf(logFile,"\n");
+
 		if((ibytessent = sendto(s,(char*)&msgFrame,sizeof(msgFrame),0,(sockaddr *)&sa_in, sizeof(sa_in)))==SOCKET_ERROR)
 					{throw "error in send in server program\n";}
 		struct timeval tp;
@@ -217,6 +252,12 @@ void hndShake()
 		{//it now will wait for the msgFrame to begin data tranfer
 			if((ibytesrecv = recvfrom(s,(char*) &msgFrame,sizeof(msgFrame),0, (SOCKADDR *) & SenderAddr, &SenderAddrSize)) == SOCKET_ERROR)
 				throw "Receive failed\n";
+
+			ostringstream convert1;
+			convert1 << msgFrame.server_number;// insert the textual representation of 'Number' in the characters in the stream
+			pack_num_string = convert1.str(); // set 'Result' to the contents of the stream
+			fprintf(logFile,strcat(log_msg_receiving,pack_num_string.c_str()));
+			fprintf(logFile,"\n");
 		}
 	}while (RetVal ==0 ||serverNo != msgFrame.client_number);	
 	cout << " Received " << msgFrame.server_number<<endl;
@@ -227,6 +268,13 @@ void hndShake()
 
 	do
 	{
+		string pack_num_string1;          // string which will contain the result
+		ostringstream convert2;   // stream used for the conversion
+		convert2 << msgFrame.client_number;// insert the textual representation of 'Number' in the characters in the stream
+		pack_num_string1 = convert2.str(); // set 'Result' to the contents of the stream
+		fprintf(logFile,strcat(log_msg_sending,pack_num_string1.c_str()));
+	    fprintf(logFile,"\n");
+
 		ibytessent = sendto(s,(char*)&msgFrame,sizeof(msgFrame),0,(sockaddr *)&sa_in, sizeof(sa_in));
 		if (ibytessent == SOCKET_ERROR)
 			throw "Send failed\n";
@@ -241,14 +289,26 @@ void hndShake()
 		{
 			if((ibytesrecv = recvfrom(s,(char*) &msgFrame,sizeof(msgFrame),0, (SOCKADDR *) & SenderAddr, &SenderAddrSize)) == SOCKET_ERROR)
 				throw "Receive failed\n";
-		}	
-	}while (RetVal ==0 ||(msgFrame.server_seqNo==-1));	
 
+			ostringstream convert3;
+			convert3 << msgFrame.server_number;// insert the textual representation of 'Number' in the characters in the stream
+			string pack_num_string2 = convert3.str(); // set 'Result' to the contents of the stream
+			fprintf(logFile,strcat(log_msg_receiving,pack_num_string2.c_str()));
+			fprintf(logFile,"\n");
+		}	
+	}while (RetVal ==0 ||(msgFrame.server_seqNo==-1));
+
+	fprintf(logFile,log_msg_3wayhandshake_finished);
+	fclose(logFile);
 }
 
 //Stop and Wait functions
  void sendNwait(MESSAGE_FRAME &buff)
 {//sends and waits for reply. If time out resends
+	FILE * logFile;
+	char name [100];
+	logFile = fopen ("log.txt","a");
+
 	int seqNo = buff.server_seqNo;
 	int newSeq = (msgFrame.server_seqNo+1) %2;
 	msgFrame.server_seqNo=newSeq;
@@ -257,6 +317,17 @@ void hndShake()
 		ibytessent = sendto(s,(char*)&buff,sizeof(buff),0,(sockaddr *)&sa_in, sizeof(sa_in));
 		if (ibytessent == SOCKET_ERROR)
 			throw "Send failed\n";
+
+		char log_msg_sending[128] = "Client: sent packet: ";
+		char log_msg_receiving[128] = "Client: received ACK for packet: ";
+
+		string pack_num_string;          // string which will contain the result
+		ostringstream convert;   // stream used for the conversion
+		convert << msgFrame.client_seqNo;// insert the textual representation of 'Number' in the characters in the stream
+		pack_num_string = convert.str(); // set 'Result' to the contents of the stream
+		fprintf(logFile,strcat(log_msg_sending,pack_num_string.c_str()));
+	    fprintf(logFile,"\n");
+
 		struct timeval tp;
 		tp.tv_usec =0;
 		tp.tv_sec=1;
@@ -268,8 +339,17 @@ void hndShake()
 		{
 			if((ibytesrecv = recvfrom(s,(char*) &buff,sizeof(buff),0, (SOCKADDR *) & SenderAddr, &SenderAddrSize)) == SOCKET_ERROR)
 				throw "Receive failed\n";
+
+			string pack_num_string;          // string which will contain the result
+			ostringstream convert;   // stream used for the conversion
+			convert << msgFrame.server_seqNo;// insert the textual representation of 'Number' in the characters in the stream
+			pack_num_string = convert.str(); // set 'Result' to the contents of the stream
+			fprintf(logFile,strcat(log_msg_receiving,pack_num_string.c_str()));
+			fprintf(logFile,"\n");
 		}	
 	}while (RetVal ==0 || (seqNo == buff.server_seqNo));	
+
+	fclose(logFile);
 }
 
 

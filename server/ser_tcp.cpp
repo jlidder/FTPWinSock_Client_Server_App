@@ -121,9 +121,17 @@ using namespace std;
                             {
                                     do
                                     {
-                                            //printf("%s\n", data.cFileName);
                                             sprintf(msgFrame.data,data.cFileName);
                                             sendNwait(msgFrame);
+
+											string rcvd_msg( reinterpret_cast< char const* >(msgFrame.data) );
+											char donelistchar[128] = "donelist";
+
+											if(strcmp(rcvd_msg.c_str(),donelistchar))
+											{
+												//break;
+											}
+
                                     }while (FindNextFile(hFind, &data));
 
                                     FindClose(hFind);

@@ -1,3 +1,7 @@
+
+
+
+
 #ifndef AUX_SER_H
 
 #define AUX_SER_H
@@ -27,13 +31,17 @@ SOCKADDR_IN SenderAddr;
 int SenderAddrSize = sizeof (sa1);//size of address for udp recvfrom
 sockaddr_in RecvAddr;//udp sendto
 
-//handshake frame
-struct THREE_WAY_HS{
+//hold data to be sent
+struct HolderFrame{
 	int client_number;
 	int server_number;
 	char command[20];
+	int client_seqNo;
+	int server_seqNo;
 	char file_name[128];
-}hsFrame;
+	int file_size;
+	char data[PACKET_SIZE];//or error message
+}hldFrame;
 
 //data frames
 struct MESSAGE_FRAME {
@@ -80,7 +88,7 @@ union {struct sockaddr generic;
 	DWORD dwtest;
 
 //functions
-void sendNwait(MESSAGE_FRAME &buff);//for stop and wait protocol
+void sendNwait();//for stop and wait protocol
 void hndShake(); //for 3 way handshake
 
 

@@ -92,7 +92,7 @@ using namespace std;
                     WIN32_FIND_DATA data;
                     int no_of_files=0;
 
-                    hFind = FindFirstFile("c:\\*.*", &data);
+                    hFind = FindFirstFile("g:\\My Documents\\Visual Studio 2012\\Projects\\Server\\Server\\*.*", &data);
                     if (hFind != INVALID_HANDLE_VALUE)
                     {
                             do
@@ -116,7 +116,7 @@ using namespace std;
 
                     for(int counter=0; counter<no_of_files; counter++)
                     {
-                            hFind = FindFirstFile("c:\\*.*", &data);
+                            hFind = FindFirstFile("g:\\My Documents\\Visual Studio 2012\\Projects\\Server\\Server\\*.*", &data);
                             if (hFind != INVALID_HANDLE_VALUE)
                             {
                                     do
@@ -234,6 +234,7 @@ using namespace std;
 								outFile.write(msgFrame.data,lastPacketSize);
 								outFile.close();
 								cout<<"File is completely received"<<endl;
+								sendNwait();
 							}					
 						}
 
@@ -268,7 +269,10 @@ using namespace std;
                     }
 
                     else
-                            printf ("Delete File is  OK!\n");
+					{
+						sendNwait();
+                        printf ("Delete File is  OK!\n");
+					}
 				} 
 
 		//	}//wait loop

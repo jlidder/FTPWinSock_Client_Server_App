@@ -120,6 +120,12 @@ int main(void){
 			cin >> msgFrame.file_name;
 		}
 
+		if(msgFrame.command[0] == 'd' || msgFrame.command[0] == 'D'){
+			cout << "What is the file name you want to delete?" << endl;
+			cin >> msgFrame.file_name;}
+
+		
+
 		cout << "Handshaking beginning with remote host:";
 		cout << inet_ntoa(sa_in.sin_addr) << endl;	
 		hndShake();//initiate handshake
@@ -152,6 +158,7 @@ int main(void){
             }
 			sprintf(msgFrame.data,"donelist");
 			sendNwait();
+			system("PAUSE");
 		}
 
 		else if (msgFrame.command[0] == 'g' || msgFrame.command[0] == 'G')
@@ -232,10 +239,11 @@ int main(void){
 				{
 					cout << msgFrame.file_name << endl;
 					msgFrame.file_size = -1;
-						
+					cout << "file doesn't exist. Please restart client and server :)";
+
 					//sending no file found -1
 					sendNwait();
-					cout << "file doesn't exist";
+					
 
 				}
 				inFile.close();				
@@ -250,6 +258,7 @@ int main(void){
 
 			if(!strcmp(delete_success_or_failure.c_str() , "success"))
 					throw "file was not deleted successfully on server :(";
+			cout<<"file deleted";
 		} 
 	} // try loop
 
@@ -329,7 +338,7 @@ void hndShake()
 	cout << " Received " << msgFrame.server_number<<endl;
 	msgFrame.client_seqNo = msgFrame.client_number % 2;//create client sequence number
 	
-	cout<<"Handshake complete";
+	cout<<"Handshake complete\n";
 	//making a deep copy of original values in case of resending
 	hldFrame.client_number = msgFrame.client_number; hldFrame.server_number = msgFrame.server_number; hldFrame.client_seqNo = msgFrame.client_seqNo;hldFrame.server_seqNo=msgFrame.server_seqNo;
 	sprintf(hldFrame.command,msgFrame.command);sprintf(hldFrame.file_name,msgFrame.file_name);hldFrame.file_size=msgFrame.file_size;

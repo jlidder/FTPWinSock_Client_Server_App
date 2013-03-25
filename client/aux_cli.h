@@ -1,4 +1,3 @@
-
 #ifndef AUX_CLI_H
 #define AUX_CLI_H
 
@@ -62,7 +61,7 @@ struct MESSAGE_FRAME {
 
 //buffer data types
 char szbuffer[PACKET_SIZE];
-
+char ans[128];
 char *buffer;
 
 int ibufferlen=0;

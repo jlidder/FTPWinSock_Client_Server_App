@@ -114,6 +114,12 @@ int main(void){
 			cout << "What is the file name you want to get?" << endl;
 			cin >> msgFrame.file_name;}
 
+		if(msgFrame.command[0] == 'p' || msgFrame.command[0] == 'P')
+		{
+			cout << "What is the file you want to put?" << endl;
+			cin >> msgFrame.file_name;
+		}
+
 		cout << "Handshaking beginning with remote host:";
 		cout << inet_ntoa(sa_in.sin_addr) << endl;	
 		hndShake();//initiate handshake
@@ -126,7 +132,7 @@ int main(void){
             string list_size_string( reinterpret_cast< char const* >(msgFrame.data) );
 			int list_size = atoi(list_size_string.c_str());
 
-            sprintf(msgFrame.data,"startfilenames");
+            sprintf(msgFrame.data,"startfilenames111111");
 
             char** File_Names_Array_PTRS = new char*[list_size];
             for(int i = 0; i < list_size; ++i)
@@ -180,7 +186,36 @@ int main(void){
 
 		else if (msgFrame.command[0] == 'p' || msgFrame.command[0] == 'P')
 		{
+			ifstream inFile(msgFrame.file_name, ios::in|ios::binary|ios::ate);
+				if(inFile.is_open())
+				{
 
+					msgFrame.file_size = inFile.tellg();
+					inFile.seekg(0, ios::beg);
+
+					//sending file size
+					sendNwait(msgFrame);
+
+					//sending file
+					int packet_amount = (int)ceil(((double)msgFrame.file_size/(double)PACKET_SIZE));
+					for(int i=1;i<=packet_amount;i++)
+					{
+						inFile.read(msgFrame.data,PACKET_SIZE);//read from file		
+						//send what is readsendNwait(msgFrame);
+						sendNwait(msgFrame);
+					}
+				}
+				else
+				{
+					cout << msgFrame.file_name << endl;
+					msgFrame.file_size = -1;
+						
+					//sending no file found -1
+					sendNwait(msgFrame);
+					cout << "file doesn't exist";
+
+				}
+				inFile.close();				
 		}
 
 		else if (msgFrame.command[0] == 'd' || msgFrame.command[0] == 'D')

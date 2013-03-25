@@ -172,7 +172,36 @@ using namespace std;
 
 				else if (msgFrame.command[0] == 'p' || msgFrame.command[0] == 'P')
 				{
-					
+					sprintf(msgFrame.data,"starttransfer");
+
+					sendNwait(msgFrame);
+
+					if(msgFrame.file_size <0 )
+						throw "file does not exist on server!";
+
+					else//receive file
+					{//calulate packet number
+						cout << msgFrame.file_size << endl;
+						int packet_amount = (int)ceil(((double)msgFrame.file_size/PACKET_SIZE));
+						ofstream outFile( msgFrame.file_name, ios::binary | ios::out);
+
+						for(int i=1;i<=packet_amount;i++)//needs to use select for final implementation
+						{
+							sendNwait(msgFrame);
+							if(i < packet_amount)
+							{
+								outFile.write(msgFrame.data,PACKET_SIZE);
+							}
+							else
+							{						
+								int lastPacketSize = msgFrame.file_size - ((packet_amount - 1) * PACKET_SIZE);
+						
+								outFile.write(msgFrame.data,lastPacketSize);
+								outFile.close();
+								cout<<"File is completely received"<<endl;
+							}					
+						}
+					}
 				}
 
 				else if (msgFrame.command[0] == 'd' || msgFrame.command[0] == 'D')

@@ -33,13 +33,18 @@ sockaddr_in RecvAddr; //used for udp sendto
 sockaddr_in SenderAddr; //used for udp recvfrom
 int SenderAddrSize = sizeof (SenderAddr);
 
-//handshake frame
-struct THREE_WAY_HS{
+//hold data to be sent
+struct HolderFrame{
 	int client_number;
 	int server_number;
 	char command[20];
+	int client_seqNo;
+	int server_seqNo;
 	char file_name[128];
-}hsFrame;
+	int file_size;
+	char data[PACKET_SIZE];//or error message
+}hldFrame;
+
 
 //data frames
 struct MESSAGE_FRAME {
@@ -84,7 +89,7 @@ DWORD dwtest;
 
 //Functions
 
- void sendNwait(MESSAGE_FRAME &buff);//for stop and wait protocol	
+ void sendNwait();//for stop and wait protocol	
 
  void hndShake();	// for 3 way handshake
 
